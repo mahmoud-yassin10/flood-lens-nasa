@@ -1,18 +1,13 @@
-name: Build & Deploy Flood Lens (Vite) to GitHub Pages
+name: Deploy Flood Lens (Vite) to GitHub Pages
 
 on:
   push:
-    branches: [ main, freeze-*, first-commit ] 
+    branches: [ main ]   # <- change if your default branch isn't main
   workflow_dispatch:
-    inputs:
-      ref:
-        description: "Git ref (branch/tag/SHA) to build"
-        required: false
-        default: main
 
 permissions:
   contents: read
-  pages: write  
+  pages: write
   id-token: write
 
 concurrency:
@@ -23,33 +18,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-            ref: ${{ inputs.ref || github.ref }}
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install deps
-        run: npm ci || npm install
+        run: npm ci
 
-      - name: Build (Vite for GitHub Pages)
-        env:
-          VITE_PUBLIC_BASE: /flood-lens-nasa/
-          VITE_FORCE_MANUAL_MODE: "true"
-          VITE_API_BASE_URL: ""
-        run: |
-          npm run build
-          test -f dist/index.html
-          # sanity: ensure we ship bundle, not src/main.tsx
-          if grep -q "src/main.tsx" dist/index.html; then
-            echo "ERROR: dist/index.html still references src/main.tsx"; exit 1
-          fi
-          cp index.html dist/404.html || true
-          touch dist/.nojekyll
-          echo $GITHUB_SHA > dist/version.txt
-          head -n 20 dist/index.html
+      - name: Build
+        run: npm run build
+
+      # SPA fallback so refresh doesn't 404 on GitHub Pages
+      - name: Add 404 fallback
+        run: cp dist/index.html dist/404.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -63,5 +49,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
