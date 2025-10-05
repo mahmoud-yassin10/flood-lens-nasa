@@ -1,0 +1,13 @@
+{
+  "cityId": "wad_madani",
+  "timestamp": "2025-10-05T12:00:00Z",
+  "rain_0_3h": 2.8,
+  "rain_0_24h": 9.7,
+  "rain_24_72h": 24.3,
+  "soil_moisture": 0.28,
+  "water_area_delta": 1.9,
+  "swot_wse_anomaly": 0.5,
+  "risk": "Medium",
+  "lastUpdate": "2025-10-05T11:30:00Z",
+  "freshness": "fresh"
+}

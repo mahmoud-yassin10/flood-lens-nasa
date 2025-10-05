@@ -1,0 +1,13 @@
+{
+  "cityId": "hcmc",
+  "timestamp": "2025-10-05T12:00:00Z",
+  "rain_0_3h": 1.8,
+  "rain_0_24h": 6.7,
+  "rain_24_72h": 21.3,
+  "soil_moisture": 0.27,
+  "water_area_delta": 1.5,
+  "swot_wse_anomaly": null,
+  "risk": "Medium",
+  "lastUpdate": "2025-10-05T09:20:00Z",
+  "freshness": "stale"
+}

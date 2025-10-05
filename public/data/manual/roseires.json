@@ -1,0 +1,13 @@
+{
+  "cityId": "roseires",
+  "timestamp": "2025-10-05T12:00:00Z",
+  "rain_0_3h": 5.6,
+  "rain_0_24h": 18.3,
+  "rain_24_72h": 45.7,
+  "soil_moisture": 0.35,
+  "water_area_delta": 3.8,
+  "swot_wse_anomaly": 1.2,
+  "risk": "High",
+  "lastUpdate": "2025-10-05T11:20:00Z",
+  "freshness": "fresh"
+}

@@ -1,0 +1,13 @@
+{
+  "cityId": "khartoum",
+  "timestamp": "2025-10-05T12:00:00Z",
+  "rain_0_3h": 4.2,
+  "rain_0_24h": 14.6,
+  "rain_24_72h": 38.9,
+  "soil_moisture": 0.31,
+  "water_area_delta": 2.7,
+  "swot_wse_anomaly": 0.8,
+  "risk": "High",
+  "lastUpdate": "2025-10-05T11:15:00Z",
+  "freshness": "fresh"
+}

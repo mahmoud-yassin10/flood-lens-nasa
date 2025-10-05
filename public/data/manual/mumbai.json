@@ -1,0 +1,13 @@
+{
+  "cityId": "mumbai",
+  "timestamp": "2025-10-05T12:00:00Z",
+  "rain_0_3h": 1.2,
+  "rain_0_24h": 5.8,
+  "rain_24_72h": 18.4,
+  "soil_moisture": 0.25,
+  "water_area_delta": 0.8,
+  "swot_wse_anomaly": null,
+  "risk": "Medium",
+  "lastUpdate": "2025-10-05T08:15:00Z",
+  "freshness": "stale"
+}

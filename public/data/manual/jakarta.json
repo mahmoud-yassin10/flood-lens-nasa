@@ -1,0 +1,13 @@
+{
+  "cityId": "jakarta",
+  "timestamp": "2025-10-05T12:00:00Z",
+  "rain_0_3h": 12.8,
+  "rain_0_24h": 42.5,
+  "rain_24_72h": 95.3,
+  "soil_moisture": 0.42,
+  "water_area_delta": 8.5,
+  "swot_wse_anomaly": null,
+  "risk": "High",
+  "lastUpdate": "2025-10-05T09:30:00Z",
+  "freshness": "stale"
+}

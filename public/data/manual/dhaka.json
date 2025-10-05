@@ -1,0 +1,13 @@
+{
+  "cityId": "dhaka",
+  "timestamp": "2025-10-05T12:00:00Z",
+  "rain_0_3h": 8.4,
+  "rain_0_24h": 28.7,
+  "rain_24_72h": 72.1,
+  "soil_moisture": 0.38,
+  "water_area_delta": 5.3,
+  "swot_wse_anomaly": null,
+  "risk": "High",
+  "lastUpdate": "2025-10-05T10:00:00Z",
+  "freshness": "stale"
+}

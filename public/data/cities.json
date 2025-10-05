@@ -1,0 +1,17 @@
+[
+  {"id":"alexandria","group":"med_delta","name":"Alexandria, Egypt","lat":31.2001,"lon":29.9187,"tz":"Africa/Cairo","radius_km":35},
+  {"id":"gerd","group":"blue_nile","name":"GERD (Guba), Ethiopia","lat":11.214,"lon":35.092,"tz":"Africa/Addis_Ababa","radius_km":35},
+  {"id":"bahir_dar","group":"blue_nile","name":"Bahir Dar, Ethiopia","lat":11.5740,"lon":37.3610,"tz":"Africa/Addis_Ababa","radius_km":35},
+  {"id":"roseires","group":"blue_nile","name":"Roseires, Sudan","lat":11.7890,"lon":34.3860,"tz":"Africa/Khartoum","radius_km":35},
+  {"id":"sennar","group":"blue_nile","name":"Sennar, Sudan","lat":13.5675,"lon":33.5675,"tz":"Africa/Khartoum","radius_km":35},
+  {"id":"wad_madani","group":"blue_nile","name":"Wad Madani, Sudan","lat":14.4010,"lon":33.5190,"tz":"Africa/Khartoum","radius_km":35},
+  {"id":"khartoum","group":"blue_nile","name":"Khartoum, Sudan","lat":15.5007,"lon":32.5599,"tz":"Africa/Khartoum","radius_km":40},
+  {"id":"jakarta","group":"global_hotspot","name":"Jakarta, Indonesia","lat":-6.2088,"lon":106.8456,"tz":"Asia/Jakarta","radius_km":40},
+  {"id":"manila","group":"global_hotspot","name":"Manila, Philippines","lat":14.5995,"lon":120.9842,"tz":"Asia/Manila","radius_km":35},
+  {"id":"bangkok","group":"global_hotspot","name":"Bangkok, Thailand","lat":13.7563,"lon":100.5018,"tz":"Asia/Bangkok","radius_km":35},
+  {"id":"hcmc","group":"global_hotspot","name":"Ho Chi Minh City, Vietnam","lat":10.8231,"lon":106.6297,"tz":"Asia/Ho_Chi_Minh","radius_km":35},
+  {"id":"dhaka","group":"global_hotspot","name":"Dhaka, Bangladesh","lat":23.8103,"lon":90.4125,"tz":"Asia/Dhaka","radius_km":35},
+  {"id":"mumbai","group":"global_hotspot","name":"Mumbai, India","lat":19.0760,"lon":72.8777,"tz":"Asia/Kolkata","radius_km":35},
+  {"id":"lagos","group":"global_hotspot","name":"Lagos, Nigeria","lat":6.5244,"lon":3.3792,"tz":"Africa/Lagos","radius_km":35},
+  {"id":"houston","group":"global_hotspot","name":"Houston, USA","lat":29.7604,"lon":-95.3698,"tz":"America/Chicago","radius_km":40}
+]

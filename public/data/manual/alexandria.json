@@ -1,0 +1,13 @@
+{
+  "cityId": "alexandria",
+  "timestamp": "2025-10-05T12:00:00Z",
+  "rain_0_3h": 2.4,
+  "rain_0_24h": 8.5,
+  "rain_24_72h": 15.2,
+  "soil_moisture": 0.28,
+  "water_area_delta": 1.2,
+  "swot_wse_anomaly": null,
+  "risk": "Medium",
+  "lastUpdate": "2025-10-05T10:30:00Z",
+  "freshness": "stale"
+}

@@ -1,0 +1,13 @@
+{
+  "cityId": "bangkok",
+  "timestamp": "2025-10-05T12:00:00Z",
+  "rain_0_3h": 0.5,
+  "rain_0_24h": 2.3,
+  "rain_24_72h": 8.9,
+  "soil_moisture": 0.21,
+  "water_area_delta": 0.3,
+  "swot_wse_anomaly": null,
+  "risk": "Low",
+  "lastUpdate": "2025-10-05T11:50:00Z",
+  "freshness": "fresh"
+}

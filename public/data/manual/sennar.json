@@ -1,0 +1,13 @@
+{
+  "cityId": "sennar",
+  "timestamp": "2025-10-05T12:00:00Z",
+  "rain_0_3h": 3.2,
+  "rain_0_24h": 11.5,
+  "rain_24_72h": 28.9,
+  "soil_moisture": 0.30,
+  "water_area_delta": 2.3,
+  "swot_wse_anomaly": 0.6,
+  "risk": "Medium",
+  "lastUpdate": "2025-10-05T11:25:00Z",
+  "freshness": "fresh"
+}

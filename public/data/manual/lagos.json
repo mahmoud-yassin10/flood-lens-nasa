@@ -1,0 +1,13 @@
+{
+  "cityId": "lagos",
+  "timestamp": "2025-10-05T12:00:00Z",
+  "rain_0_3h": 0.3,
+  "rain_0_24h": 1.8,
+  "rain_24_72h": 6.2,
+  "soil_moisture": 0.19,
+  "water_area_delta": 0.2,
+  "swot_wse_anomaly": null,
+  "risk": "Low",
+  "lastUpdate": "2025-10-05T10:30:00Z",
+  "freshness": "stale"
+}
