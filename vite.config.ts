@@ -1,8 +1,10 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+// ⛔️ wrong: import react from "@vitejs/plugin-react";
+// ✅ right:
+import react from "@vitejs/plugin-react-swc";
 
 export default defineConfig({
   plugins: [react()],
-  // IMPORTANT: set to your repo name (project pages)
+  // make assets resolve correctly on GitHub Pages
   base: "/flood-lens-nasa/",
 });
