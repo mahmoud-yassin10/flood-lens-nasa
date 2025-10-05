@@ -1,0 +1,67 @@
+name: Build & Deploy Flood Lens (Vite) to GitHub Pages
+
+on:
+  push:
+    branches: [ main, freeze-* ]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref (branch/tag/SHA) to build"
+        required: false
+        default: main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci || npm install
+
+      - name: Build (Vite for GitHub Pages)
+        env:
+          VITE_PUBLIC_BASE: /flood-lens-nasa/
+          VITE_FORCE_MANUAL_MODE: "true"
+          VITE_API_BASE_URL: ""
+        run: |
+          npm run build
+          test -f dist/index.html
+          # sanity: ensure we ship bundle, not src/main.tsx
+          if grep -q "src/main.tsx" dist/index.html; then
+            echo "ERROR: dist/index.html still references src/main.tsx"; exit 1
+          fi
+          cp index.html dist/404.html || true
+          touch dist/.nojekyll
+          echo $GITHUB_SHA > dist/version.txt
+          head -n 20 dist/index.html
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
