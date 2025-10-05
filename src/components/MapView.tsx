@@ -1,119 +1,258 @@
-import { useEffect, useRef } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef } from "react";
+import { MapContainer, GeoJSON, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useCityStore } from "@/store/cityStore";
 
-// Fix Leaflet default marker icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+import type { AssetFeature, FloodEventFeature } from "@/types/geo";
+import { assetCentroid, floodCentroid, MAX_ASSET_MARKERS } from "@/lib/geo";
+import { BaseLayerToggle } from "@/components/BaseLayerToggle";
+import { Button } from "@/components/ui/button";
+import { LocalClock } from "@/components/LocalClock";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { BASEMAP_CHOICES, BASEMAP_LABELS, BasemapChoice, ThemeMode } from "@/lib/theme";
 
-export function MapView() {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<L.Map | null>(null);
-  const markersRef = useRef<Map<string, L.Marker>>(new Map());
+interface MapViewProps {
+  floods: FloodEventFeature[];
+  impactedByFlood: Record<string, AssetFeature[]>;
+  selectedFloodId: string;
+  themeMode: ThemeMode;
+  basemapChoice: BasemapChoice;
+  onSelectFlood: (floodId: string) => void;
+  onChangeBasemap: (choice: BasemapChoice) => void;
+  onOpenDetails: () => void;
+  onMapReady?: (map: L.Map) => void;
+  onToggleFullMap: () => void;
+  isFullMapView: boolean;
+}
 
-  const { cities, selectedCity } = useCityStore();
+const boundsPadding: L.PointExpression = [32, 32];
 
-  useEffect(() => {
-    if (!mapRef.current || mapInstance.current) return;
+export function MapView({
+  floods,
+  impactedByFlood,
+  selectedFloodId,
+  themeMode,
+  basemapChoice,
+  onSelectFlood,
+  onChangeBasemap,
+  onOpenDetails,
+  onMapReady,
+  onToggleFullMap,
+  isFullMapView,
+}: MapViewProps) {
+  const mapRef = useRef<L.Map | null>(null);
 
-    // Initialize map
-    const map = L.map(mapRef.current, {
-      center: [15, 30],
-      zoom: 3,
-      zoomControl: true,
+  const selectedFlood = useMemo(() => {
+    return floods.find((feature) => feature.properties.id === selectedFloodId) ?? floods[0] ?? null;
+  }, [floods, selectedFloodId]);
+
+  const selectedImpacted: AssetFeature[] = useMemo(() => {
+    if (!selectedFlood) return [];
+    return impactedByFlood[selectedFlood.properties.id] ?? [];
+  }, [impactedByFlood, selectedFlood]);
+
+  const floodCollection = useMemo(() => ({
+    type: "FeatureCollection",
+    features: floods,
+  }), [floods]);
+
+  const floodMarkerIcon = useMemo(() => {
+    return L.divIcon({
+      className: "",
+      html: '<div class="flood-marker" role="presentation"></div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
     });
-
-    // Add base layer (light theme)
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      maxZoom: 19,
-    }).addTo(map);
-
-    // Add NASA GIBS layer example (IMERG precipitation)
-    // Note: In production, this would use proper time dimension
-    const today = new Date().toISOString().split("T")[0];
-    L.tileLayer(
-      `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GPM_3IMERGHH/default/${today}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`,
-      {
-        attribution: "NASA GIBS - GPM IMERG",
-        opacity: 0.6,
-        maxZoom: 9,
-      }
-    ).addTo(map);
-
-    mapInstance.current = map;
-
-    return () => {
-      map.remove();
-      mapInstance.current = null;
-    };
   }, []);
 
-  // Update markers when cities change
-  useEffect(() => {
-    if (!mapInstance.current) return;
+  const assetIcons = useRef<Record<string, L.DivIcon>>({});
 
-    const map = mapInstance.current;
+  const assetsForMarkers = useMemo(() => {
+    return selectedImpacted
+      .slice(0, MAX_ASSET_MARKERS)
+      .map((asset) => {
+        const position = assetCentroid(asset);
+        if (!position) return null;
+        return { asset, position };
+      })
+      .filter((entry): entry is { asset: AssetFeature; position: { lat: number; lng: number } } => Boolean(entry));
+  }, [selectedImpacted]);
 
-    // Clear existing markers
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current.clear();
+  const truncated = selectedImpacted.length > MAX_ASSET_MARKERS;
 
-    // Add markers for each city
-    cities.forEach((city) => {
-      const marker = L.marker([city.lat, city.lon], {
-        title: city.name,
-      }).addTo(map);
+  const fullMapLabel = isFullMapView ? "Exit full map" : "Full map view";
 
-      marker.bindPopup(`
-        <div class="p-2">
-          <strong>${city.name}</strong><br/>
-          <span class="text-sm text-gray-600">${city.lat.toFixed(4)}, ${city.lon.toFixed(4)}</span>
-        </div>
-      `);
 
-      markersRef.current.set(city.id, marker);
-    });
-  }, [cities]);
+  const handleMapReady = useCallback(
+    (map: L.Map) => {
+      mapRef.current = map;
+      onMapReady?.(map);
+    },
+    [onMapReady],
+  );
 
-  // Pan to selected city
-  useEffect(() => {
-    if (!mapInstance.current || !selectedCity) return;
+  const handleFeatureClick = useCallback(
+    (feature: FloodEventFeature) => {
+      onSelectFlood(feature.properties.id);
+    },
+    [onSelectFlood],
+  );
 
-    const map = mapInstance.current;
-    map.setView([selectedCity.lat, selectedCity.lon], 8, {
-      animate: true,
-      duration: 1,
-    });
+  const registerFeature = useCallback(
+    (feature: FloodEventFeature, layer: L.Layer) => {
+      layer.on("click", () => handleFeatureClick(feature));
+    },
+    [handleFeatureClick],
+  );
 
-    const marker = markersRef.current.get(selectedCity.id);
-    if (marker) {
-      marker.openPopup();
-    }
-  }, [selectedCity]);
+
+  const centroid = selectedFlood ? floodCentroid(selectedFlood) : { lat: 0, lng: 0 };
 
   return (
-    <div className="relative h-screen w-full">
-      <div ref={mapRef} className="h-full w-full" />
-      
-      {/* Legend Overlay */}
-      <div className="absolute bottom-4 left-4 bg-card/95 backdrop-blur-sm p-4 rounded-lg shadow-lg border max-w-xs">
-        <h3 className="font-semibold mb-2 text-sm">Active Layers</h3>
-        <div className="space-y-1 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-primary/60 rounded"></div>
-            <span>NASA GIBS - GPM IMERG Precipitation</span>
-          </div>
-          <p className="text-muted-foreground text-xs mt-2">
-            Last update: {new Date().toLocaleString()}
-          </p>
+    <div className="relative h-full w-full">
+      <MapContainer
+        center={[centroid.lat, centroid.lng]}
+        zoom={6}
+        className="h-full w-full rounded-xl border border-border"
+        scrollWheelZoom
+        whenCreated={handleMapReady}
+        preferCanvas
+      >
+        <BaseLayerToggle mode={themeMode} choice={basemapChoice} />
+
+        <GeoJSON
+          key={selectedFlood?.properties.id ?? "floods"}
+          data={floodCollection as any}
+          style={(feature) => {
+            const isSelected = feature?.properties?.id === selectedFlood?.properties.id;
+            return {
+              color: "var(--map-flood)",
+              weight: isSelected ? 2.5 : 1,
+              fillColor: "var(--map-flood)",
+              fillOpacity: isSelected ? 0.35 : 0.18,
+            };
+          }}
+          onEachFeature={(feature, layer) => registerFeature(feature as FloodEventFeature, layer)}
+        />
+
+        {floods.map((feature) => {
+          const { lat, lng } = floodCentroid(feature);
+          const impactedCount = impactedByFlood[feature.properties.id]?.length ?? 0;
+          const timezone = feature.properties.timezone ?? "UTC";
+          return (
+            <Marker
+              key={feature.properties.id}
+              position={[lat, lng]}
+              icon={floodMarkerIcon}
+              eventHandlers={{
+                click: () => onSelectFlood(feature.properties.id),
+              }}
+            >
+              <Popup>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <h3 className="text-base font-semibold">{feature.properties.name}</h3>
+                    <p className="text-muted-foreground">
+                      {feature.properties.admin1 ?? "-"}, {feature.properties.country} ({feature.properties.iso3})
+                    </p>
+                  </div>
+                  <div className="text-xs text-muted-foreground flex items-center justify-between gap-2">
+                    <span>Local:</span>
+                    <LocalClock timezone={timezone} />
+                  </div>
+                  <p className="text-sm">Impacted assets: {impactedCount}</p>
+                  <Button className="w-full" onClick={() => {
+                    onSelectFlood(feature.properties.id);
+                    onOpenDetails();
+                  }}>
+                    Open details
+                  </Button>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
+        {assetsForMarkers.map(({ asset, position }) => {
+          const type = asset.properties.type;
+          if (!assetIcons.current[type]) {
+            assetIcons.current[type] = L.divIcon({
+              className: "",
+              html: `<div class="asset-marker" title="${type}"></div>`,
+              iconSize: [14, 14],
+              iconAnchor: [7, 7],
+            });
+          }
+          const icon = assetIcons.current[type];
+          return (
+            <Marker key={asset.properties.id} position={[position.lat, position.lng]} icon={icon}>
+              <Popup>
+                <div className="space-y-1 text-sm">
+                  <p className="font-medium">{asset.properties.name}</p>
+                  <p className="text-muted-foreground capitalize">{asset.properties.type}</p>
+                  <p className="text-muted-foreground">
+                    {asset.properties.admin1 ?? "-"}, {asset.properties.country}
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+      </MapContainer>
+
+      <div className="pointer-events-none absolute left-4 top-4 z-[1200] flex flex-col gap-3">
+        <div className="pointer-events-auto self-end">
+          <Button size="sm" variant="secondary" onClick={onToggleFullMap}>
+            {fullMapLabel}
+          </Button>
+        </div>
+        <div className="pointer-events-auto rounded-md border bg-panel/95 p-2 shadow-lg backdrop-blur">
+          <p className="text-xs font-medium uppercase text-muted-foreground">Basemap</p>
+          <ToggleGroup
+            type="single"
+            value={basemapChoice}
+            onValueChange={(value) => {
+              if (!value) return;
+              onChangeBasemap(value as BasemapChoice);
+            }}
+            className="mt-2"
+          >
+            {BASEMAP_CHOICES.map((choice) => (
+              <ToggleGroupItem key={choice} value={choice} className="text-xs capitalize">
+                {BASEMAP_LABELS[choice]}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+
+        <div className="pointer-events-auto rounded-md border bg-panel/95 p-3 text-xs shadow-lg backdrop-blur">
+          <p className="font-semibold text-sm">Legend</p>
+          <ul className="mt-2 space-y-1">
+            <li className="flex items-center gap-2">
+              <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: "var(--map-marker)" }} />
+              Flood centroid
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: "var(--map-flood)" }} />
+              Flood extent
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: "var(--map-asset)" }} />
+              Impacted assets
+            </li>
+          </ul>
+          {truncated ? (
+            <p className="mt-2 text-muted-foreground">
+              Showing first {MAX_ASSET_MARKERS.toLocaleString()} of {selectedImpacted.length.toLocaleString()} assets.
+            </p>
+          ) : null}
         </div>
       </div>
     </div>
   );
 }
+
+
+
+
+

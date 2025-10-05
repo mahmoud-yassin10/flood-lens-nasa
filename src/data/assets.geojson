@@ -1,0 +1,770 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          29.8187,
+          31.100099999999998
+        ]
+      },
+      "properties": {
+        "id": "alexandria-hospital",
+        "name": "Alexandria Hospital",
+        "type": "hospital",
+        "country": "Egypt",
+        "admin1": "Alexandria"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          29.9187,
+          31.2001
+        ]
+      },
+      "properties": {
+        "id": "alexandria-school",
+        "name": "Alexandria School",
+        "type": "school",
+        "country": "Egypt",
+        "admin1": "Alexandria"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.018700000000003,
+          31.3001
+        ]
+      },
+      "properties": {
+        "id": "alexandria-power",
+        "name": "Alexandria Power",
+        "type": "power",
+        "country": "Egypt",
+        "admin1": "Alexandria"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          34.992,
+          11.114
+        ]
+      },
+      "properties": {
+        "id": "gerd-hospital",
+        "name": "GERD (Guba) Hospital",
+        "type": "hospital",
+        "country": "Ethiopia",
+        "admin1": "GERD (Guba)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.092,
+          11.214
+        ]
+      },
+      "properties": {
+        "id": "gerd-school",
+        "name": "GERD (Guba) School",
+        "type": "school",
+        "country": "Ethiopia",
+        "admin1": "GERD (Guba)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.192,
+          11.314
+        ]
+      },
+      "properties": {
+        "id": "gerd-power",
+        "name": "GERD (Guba) Power",
+        "type": "power",
+        "country": "Ethiopia",
+        "admin1": "GERD (Guba)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.260999999999996,
+          11.474
+        ]
+      },
+      "properties": {
+        "id": "bahir_dar-hospital",
+        "name": "Bahir Dar Hospital",
+        "type": "hospital",
+        "country": "Ethiopia",
+        "admin1": "Bahir Dar"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.361,
+          11.574
+        ]
+      },
+      "properties": {
+        "id": "bahir_dar-school",
+        "name": "Bahir Dar School",
+        "type": "school",
+        "country": "Ethiopia",
+        "admin1": "Bahir Dar"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.461,
+          11.674
+        ]
+      },
+      "properties": {
+        "id": "bahir_dar-power",
+        "name": "Bahir Dar Power",
+        "type": "power",
+        "country": "Ethiopia",
+        "admin1": "Bahir Dar"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          34.286,
+          11.689
+        ]
+      },
+      "properties": {
+        "id": "roseires-hospital",
+        "name": "Roseires Hospital",
+        "type": "hospital",
+        "country": "Sudan",
+        "admin1": "Roseires"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          34.386,
+          11.789
+        ]
+      },
+      "properties": {
+        "id": "roseires-school",
+        "name": "Roseires School",
+        "type": "school",
+        "country": "Sudan",
+        "admin1": "Roseires"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          34.486000000000004,
+          11.889
+        ]
+      },
+      "properties": {
+        "id": "roseires-power",
+        "name": "Roseires Power",
+        "type": "power",
+        "country": "Sudan",
+        "admin1": "Roseires"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          33.4675,
+          13.467500000000001
+        ]
+      },
+      "properties": {
+        "id": "sennar-hospital",
+        "name": "Sennar Hospital",
+        "type": "hospital",
+        "country": "Sudan",
+        "admin1": "Sennar"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          33.5675,
+          13.5675
+        ]
+      },
+      "properties": {
+        "id": "sennar-school",
+        "name": "Sennar School",
+        "type": "school",
+        "country": "Sudan",
+        "admin1": "Sennar"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          33.667500000000004,
+          13.6675
+        ]
+      },
+      "properties": {
+        "id": "sennar-power",
+        "name": "Sennar Power",
+        "type": "power",
+        "country": "Sudan",
+        "admin1": "Sennar"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          33.419,
+          14.301
+        ]
+      },
+      "properties": {
+        "id": "wad_madani-hospital",
+        "name": "Wad Madani Hospital",
+        "type": "hospital",
+        "country": "Sudan",
+        "admin1": "Wad Madani"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          33.519,
+          14.401
+        ]
+      },
+      "properties": {
+        "id": "wad_madani-school",
+        "name": "Wad Madani School",
+        "type": "school",
+        "country": "Sudan",
+        "admin1": "Wad Madani"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          33.619,
+          14.501
+        ]
+      },
+      "properties": {
+        "id": "wad_madani-power",
+        "name": "Wad Madani Power",
+        "type": "power",
+        "country": "Sudan",
+        "admin1": "Wad Madani"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          32.4599,
+          15.4007
+        ]
+      },
+      "properties": {
+        "id": "khartoum-hospital",
+        "name": "Khartoum Hospital",
+        "type": "hospital",
+        "country": "Sudan",
+        "admin1": "Khartoum"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          32.5599,
+          15.5007
+        ]
+      },
+      "properties": {
+        "id": "khartoum-school",
+        "name": "Khartoum School",
+        "type": "school",
+        "country": "Sudan",
+        "admin1": "Khartoum"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          32.6599,
+          15.6007
+        ]
+      },
+      "properties": {
+        "id": "khartoum-power",
+        "name": "Khartoum Power",
+        "type": "power",
+        "country": "Sudan",
+        "admin1": "Khartoum"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          106.74560000000001,
+          -6.3088
+        ]
+      },
+      "properties": {
+        "id": "jakarta-hospital",
+        "name": "Jakarta Hospital",
+        "type": "hospital",
+        "country": "Indonesia",
+        "admin1": "Jakarta"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          106.8456,
+          -6.2088
+        ]
+      },
+      "properties": {
+        "id": "jakarta-school",
+        "name": "Jakarta School",
+        "type": "school",
+        "country": "Indonesia",
+        "admin1": "Jakarta"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          106.9456,
+          -6.1088000000000005
+        ]
+      },
+      "properties": {
+        "id": "jakarta-power",
+        "name": "Jakarta Power",
+        "type": "power",
+        "country": "Indonesia",
+        "admin1": "Jakarta"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.8842,
+          14.499500000000001
+        ]
+      },
+      "properties": {
+        "id": "manila-hospital",
+        "name": "Manila Hospital",
+        "type": "hospital",
+        "country": "Philippines",
+        "admin1": "Manila"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.9842,
+          14.5995
+        ]
+      },
+      "properties": {
+        "id": "manila-school",
+        "name": "Manila School",
+        "type": "school",
+        "country": "Philippines",
+        "admin1": "Manila"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.0842,
+          14.6995
+        ]
+      },
+      "properties": {
+        "id": "manila-power",
+        "name": "Manila Power",
+        "type": "power",
+        "country": "Philippines",
+        "admin1": "Manila"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          100.40180000000001,
+          13.6563
+        ]
+      },
+      "properties": {
+        "id": "bangkok-hospital",
+        "name": "Bangkok Hospital",
+        "type": "hospital",
+        "country": "Thailand",
+        "admin1": "Bangkok"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          100.5018,
+          13.7563
+        ]
+      },
+      "properties": {
+        "id": "bangkok-school",
+        "name": "Bangkok School",
+        "type": "school",
+        "country": "Thailand",
+        "admin1": "Bangkok"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          100.6018,
+          13.8563
+        ]
+      },
+      "properties": {
+        "id": "bangkok-power",
+        "name": "Bangkok Power",
+        "type": "power",
+        "country": "Thailand",
+        "admin1": "Bangkok"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          106.5297,
+          10.7231
+        ]
+      },
+      "properties": {
+        "id": "hcmc-hospital",
+        "name": "Ho Chi Minh City Hospital",
+        "type": "hospital",
+        "country": "Vietnam",
+        "admin1": "Ho Chi Minh City"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          106.6297,
+          10.8231
+        ]
+      },
+      "properties": {
+        "id": "hcmc-school",
+        "name": "Ho Chi Minh City School",
+        "type": "school",
+        "country": "Vietnam",
+        "admin1": "Ho Chi Minh City"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          106.7297,
+          10.9231
+        ]
+      },
+      "properties": {
+        "id": "hcmc-power",
+        "name": "Ho Chi Minh City Power",
+        "type": "power",
+        "country": "Vietnam",
+        "admin1": "Ho Chi Minh City"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.3125,
+          23.7103
+        ]
+      },
+      "properties": {
+        "id": "dhaka-hospital",
+        "name": "Dhaka Hospital",
+        "type": "hospital",
+        "country": "Bangladesh",
+        "admin1": "Dhaka"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.4125,
+          23.8103
+        ]
+      },
+      "properties": {
+        "id": "dhaka-school",
+        "name": "Dhaka School",
+        "type": "school",
+        "country": "Bangladesh",
+        "admin1": "Dhaka"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.51249999999999,
+          23.910300000000003
+        ]
+      },
+      "properties": {
+        "id": "dhaka-power",
+        "name": "Dhaka Power",
+        "type": "power",
+        "country": "Bangladesh",
+        "admin1": "Dhaka"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          72.77770000000001,
+          18.976
+        ]
+      },
+      "properties": {
+        "id": "mumbai-hospital",
+        "name": "Mumbai Hospital",
+        "type": "hospital",
+        "country": "India",
+        "admin1": "Mumbai"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          72.8777,
+          19.076
+        ]
+      },
+      "properties": {
+        "id": "mumbai-school",
+        "name": "Mumbai School",
+        "type": "school",
+        "country": "India",
+        "admin1": "Mumbai"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          72.9777,
+          19.176000000000002
+        ]
+      },
+      "properties": {
+        "id": "mumbai-power",
+        "name": "Mumbai Power",
+        "type": "power",
+        "country": "India",
+        "admin1": "Mumbai"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.2792,
+          6.4244
+        ]
+      },
+      "properties": {
+        "id": "lagos-hospital",
+        "name": "Lagos Hospital",
+        "type": "hospital",
+        "country": "Nigeria",
+        "admin1": "Lagos"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.3792,
+          6.5244
+        ]
+      },
+      "properties": {
+        "id": "lagos-school",
+        "name": "Lagos School",
+        "type": "school",
+        "country": "Nigeria",
+        "admin1": "Lagos"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.4792,
+          6.6244
+        ]
+      },
+      "properties": {
+        "id": "lagos-power",
+        "name": "Lagos Power",
+        "type": "power",
+        "country": "Nigeria",
+        "admin1": "Lagos"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -95.46979999999999,
+          29.6604
+        ]
+      },
+      "properties": {
+        "id": "houston-hospital",
+        "name": "Houston Hospital",
+        "type": "hospital",
+        "country": "USA",
+        "admin1": "Houston"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -95.3698,
+          29.7604
+        ]
+      },
+      "properties": {
+        "id": "houston-school",
+        "name": "Houston School",
+        "type": "school",
+        "country": "USA",
+        "admin1": "Houston"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -95.2698,
+          29.860400000000002
+        ]
+      },
+      "properties": {
+        "id": "houston-power",
+        "name": "Houston Power",
+        "type": "power",
+        "country": "USA",
+        "admin1": "Houston"
+      }
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import type { Config } from "tailwindcss";
+﻿import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
@@ -32,12 +32,12 @@ export default {
           foreground: "hsl(var(--destructive-foreground))",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
+          DEFAULT: "hsl(var(--muted-hsl))",
           foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: "hsl(var(--accent-hsl))",
+          foreground: "hsl(var(--accent-foreground-hsl))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
@@ -99,3 +99,5 @@ export default {
   },
   plugins: [require("tailwindcss-animate")],
 } satisfies Config;
+
+

@@ -1,0 +1,605 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              29.5687,
+              30.850099999999998
+            ],
+            [
+              30.268700000000003,
+              30.850099999999998
+            ],
+            [
+              30.268700000000003,
+              31.5501
+            ],
+            [
+              29.5687,
+              31.5501
+            ],
+            [
+              29.5687,
+              30.850099999999998
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "alexandria",
+        "name": "Alexandria, Egypt",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "Egypt",
+        "iso3": "EGY",
+        "admin1": "Alexandria",
+        "severity": "med",
+        "timezone": "Africa/Cairo"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              34.742,
+              10.864
+            ],
+            [
+              35.442,
+              10.864
+            ],
+            [
+              35.442,
+              11.564
+            ],
+            [
+              34.742,
+              11.564
+            ],
+            [
+              34.742,
+              10.864
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "gerd",
+        "name": "GERD (Guba), Ethiopia",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "Ethiopia",
+        "iso3": "ETH",
+        "admin1": "GERD (Guba)",
+        "severity": "high",
+        "timezone": "Africa/Addis_Ababa"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              37.010999999999996,
+              11.224
+            ],
+            [
+              37.711,
+              11.224
+            ],
+            [
+              37.711,
+              11.924
+            ],
+            [
+              37.010999999999996,
+              11.924
+            ],
+            [
+              37.010999999999996,
+              11.224
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "bahir_dar",
+        "name": "Bahir Dar, Ethiopia",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "Ethiopia",
+        "iso3": "ETH",
+        "admin1": "Bahir Dar",
+        "severity": "high",
+        "timezone": "Africa/Addis_Ababa"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              34.036,
+              11.439
+            ],
+            [
+              34.736000000000004,
+              11.439
+            ],
+            [
+              34.736000000000004,
+              12.139
+            ],
+            [
+              34.036,
+              12.139
+            ],
+            [
+              34.036,
+              11.439
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "roseires",
+        "name": "Roseires, Sudan",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "Sudan",
+        "iso3": "SUD",
+        "admin1": "Roseires",
+        "severity": "high",
+        "timezone": "Africa/Khartoum"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              33.2175,
+              13.217500000000001
+            ],
+            [
+              33.917500000000004,
+              13.217500000000001
+            ],
+            [
+              33.917500000000004,
+              13.9175
+            ],
+            [
+              33.2175,
+              13.9175
+            ],
+            [
+              33.2175,
+              13.217500000000001
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "sennar",
+        "name": "Sennar, Sudan",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "Sudan",
+        "iso3": "SUD",
+        "admin1": "Sennar",
+        "severity": "high",
+        "timezone": "Africa/Khartoum"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              33.169,
+              14.051
+            ],
+            [
+              33.869,
+              14.051
+            ],
+            [
+              33.869,
+              14.751
+            ],
+            [
+              33.169,
+              14.751
+            ],
+            [
+              33.169,
+              14.051
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "wad_madani",
+        "name": "Wad Madani, Sudan",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "Sudan",
+        "iso3": "SUD",
+        "admin1": "Wad Madani",
+        "severity": "high",
+        "timezone": "Africa/Khartoum"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              32.2099,
+              15.1507
+            ],
+            [
+              32.9099,
+              15.1507
+            ],
+            [
+              32.9099,
+              15.8507
+            ],
+            [
+              32.2099,
+              15.8507
+            ],
+            [
+              32.2099,
+              15.1507
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "khartoum",
+        "name": "Khartoum, Sudan",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "Sudan",
+        "iso3": "SUD",
+        "admin1": "Khartoum",
+        "severity": "high",
+        "timezone": "Africa/Khartoum"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              106.49560000000001,
+              -6.5588
+            ],
+            [
+              107.1956,
+              -6.5588
+            ],
+            [
+              107.1956,
+              -5.8588000000000005
+            ],
+            [
+              106.49560000000001,
+              -5.8588000000000005
+            ],
+            [
+              106.49560000000001,
+              -6.5588
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "jakarta",
+        "name": "Jakarta, Indonesia",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "Indonesia",
+        "iso3": "IND",
+        "admin1": "Jakarta",
+        "severity": "low",
+        "timezone": "Asia/Jakarta"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              120.6342,
+              14.249500000000001
+            ],
+            [
+              121.3342,
+              14.249500000000001
+            ],
+            [
+              121.3342,
+              14.9495
+            ],
+            [
+              120.6342,
+              14.9495
+            ],
+            [
+              120.6342,
+              14.249500000000001
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "manila",
+        "name": "Manila, Philippines",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "Philippines",
+        "iso3": "PHI",
+        "admin1": "Manila",
+        "severity": "low",
+        "timezone": "Asia/Manila"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              100.15180000000001,
+              13.4063
+            ],
+            [
+              100.8518,
+              13.4063
+            ],
+            [
+              100.8518,
+              14.1063
+            ],
+            [
+              100.15180000000001,
+              14.1063
+            ],
+            [
+              100.15180000000001,
+              13.4063
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "bangkok",
+        "name": "Bangkok, Thailand",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "Thailand",
+        "iso3": "THA",
+        "admin1": "Bangkok",
+        "severity": "low",
+        "timezone": "Asia/Bangkok"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              106.2797,
+              10.4731
+            ],
+            [
+              106.9797,
+              10.4731
+            ],
+            [
+              106.9797,
+              11.1731
+            ],
+            [
+              106.2797,
+              11.1731
+            ],
+            [
+              106.2797,
+              10.4731
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "hcmc",
+        "name": "Ho Chi Minh City, Vietnam",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "Vietnam",
+        "iso3": "VIE",
+        "admin1": "Ho Chi Minh City",
+        "severity": "low",
+        "timezone": "Asia/Ho_Chi_Minh"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              90.0625,
+              23.4603
+            ],
+            [
+              90.76249999999999,
+              23.4603
+            ],
+            [
+              90.76249999999999,
+              24.160300000000003
+            ],
+            [
+              90.0625,
+              24.160300000000003
+            ],
+            [
+              90.0625,
+              23.4603
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "dhaka",
+        "name": "Dhaka, Bangladesh",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "Bangladesh",
+        "iso3": "BAN",
+        "admin1": "Dhaka",
+        "severity": "low",
+        "timezone": "Asia/Dhaka"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              72.52770000000001,
+              18.726
+            ],
+            [
+              73.2277,
+              18.726
+            ],
+            [
+              73.2277,
+              19.426000000000002
+            ],
+            [
+              72.52770000000001,
+              19.426000000000002
+            ],
+            [
+              72.52770000000001,
+              18.726
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "mumbai",
+        "name": "Mumbai, India",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "India",
+        "iso3": "IND",
+        "admin1": "Mumbai",
+        "severity": "low",
+        "timezone": "Asia/Kolkata"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              3.0292,
+              6.1744
+            ],
+            [
+              3.7292,
+              6.1744
+            ],
+            [
+              3.7292,
+              6.8744
+            ],
+            [
+              3.0292,
+              6.8744
+            ],
+            [
+              3.0292,
+              6.1744
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "lagos",
+        "name": "Lagos, Nigeria",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "Nigeria",
+        "iso3": "NIG",
+        "admin1": "Lagos",
+        "severity": "low",
+        "timezone": "Africa/Lagos"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -95.71979999999999,
+              29.4104
+            ],
+            [
+              -95.0198,
+              29.4104
+            ],
+            [
+              -95.0198,
+              30.110400000000002
+            ],
+            [
+              -95.71979999999999,
+              30.110400000000002
+            ],
+            [
+              -95.71979999999999,
+              29.4104
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "houston",
+        "name": "Houston, USA",
+        "start": "2025-10-05T18:44:42.859Z",
+        "country": "USA",
+        "iso3": "USA",
+        "admin1": "Houston",
+        "severity": "low",
+        "timezone": "America/Chicago"
+      }
+    }
+  ]
+}

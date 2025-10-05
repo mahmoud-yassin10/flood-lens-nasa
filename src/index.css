@@ -1,107 +1,108 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+:root {
+  --bg: #ffffff;
+  --ink: #0f172a;
+  --muted: #475569;
+  --panel: #ffffff;
+  --stroke: #e2e8f0;
+  --accent: #0ea5e9;
+  --accent-ink: #0b1220;
+  --good: #16a34a;
+  --warn: #f59e0b;
+  --bad: #ef4444;
+  --map-marker: #0ea5e9;
+  --map-flood: #0284c7;
+  --map-asset: #10b981;
 
-@layer base {
-  :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 198 89% 55%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --muted-hsl: 215 20% 65%;
+  --muted-foreground: 215 16% 47%;
+  --accent-hsl: 198 89% 55%;
+  --accent-foreground-hsl: 218 48% 8%;
+  --accent-foreground: 218 48% 8%;
+  --destructive: 0 84% 63%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 198 89% 55%;
+  --radius: 0.75rem;
+  --risk-low: 142 72% 36%;
+  --risk-medium: 38 92% 54%;
+  --risk-high: 0 84% 60%;
+  --data-fresh: 142 76% 36%;
+  --data-stale: 38 92% 54%;
+  --data-old: 0 84% 60%;
+  --sidebar-background: 0 0% 98%;
+  --sidebar-foreground: 222 47% 11%;
+  --sidebar-primary: 198 89% 55%;
+  --sidebar-primary-foreground: 210 40% 98%;
+  --sidebar-accent: 210 40% 96%;
+  --sidebar-accent-foreground: 222 47% 11%;
+  --sidebar-border: 214 32% 91%;
+  --sidebar-ring: 198 89% 55%;
+}
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+.dark {
+  --bg: #0b1220;
+  --ink: #f8fafc;
+  --muted: #a3b2c7;
+  --panel: #0f172a;
+  --stroke: #1f2a44;
+  --accent: #38bdf8;
+  --accent-ink: #07101f;
+  --good: #22c55e;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --map-marker: #38bdf8;
+  --map-flood: #22d3ee;
+  --map-asset: #34d399;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-
-    --accent: 25 95% 53%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 217 91% 60%;
-
-    --radius: 0.75rem;
-
-    --risk-low: 142 76% 36%;
-    --risk-medium: 45 93% 47%;
-    --risk-high: 0 84% 60%;
-
-    --data-fresh: 142 76% 36%;
-    --data-stale: 45 93% 47%;
-    --data-old: 0 84% 60%;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222 47% 7%;
-    --foreground: 210 40% 98%;
-
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 217 33% 18%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217 33% 18%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 25 95% 53%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 217 33% 18%;
-    --input: 217 33% 18%;
-    --ring: 217 91% 60%;
-
-    --risk-low: 142 76% 36%;
-    --risk-medium: 45 93% 47%;
-    --risk-high: 0 84% 60%;
-
-    --data-fresh: 142 76% 36%;
-    --data-stale: 45 93% 47%;
-    --data-old: 0 84% 60%;
-
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
+  --background: 222 47% 7%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 199 91% 60%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 217 33% 18%;
+  --secondary-foreground: 210 40% 98%;
+  --muted-hsl: 215 20% 65%;
+  --muted-foreground: 215 45% 82%;
+  --accent-hsl: 199 91% 60%;
+  --accent-foreground-hsl: 217 63% 7%;
+  --accent-foreground: 217 63% 7%;
+  --destructive: 0 84% 63%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217 33% 18%;
+  --input: 217 33% 18%;
+  --ring: 199 91% 60%;
+  --risk-low: 142 72% 40%;
+  --risk-medium: 38 92% 58%;
+  --risk-high: 0 84% 63%;
+  --data-fresh: 142 72% 40%;
+  --data-stale: 38 92% 58%;
+  --data-old: 0 84% 63%;
+  --sidebar-background: 222 47% 11%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-primary: 199 91% 60%;
+  --sidebar-primary-foreground: 210 40% 98%;
+  --sidebar-accent: 217 33% 18%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 217 33% 18%;
+  --sidebar-ring: 199 91% 60%;
 }
 
 @layer base {
@@ -110,15 +111,53 @@ All colors MUST be HSL.
   }
 
   body {
+    background-color: var(--bg);
+    color: var(--ink);
+    color-scheme: light;
     @apply bg-background text-foreground;
+  }
+
+  .dark body {
+    color-scheme: dark;
   }
 }
 
-/* Leaflet overrides for dark theme */
-.dark .leaflet-popup-content-wrapper {
-  @apply bg-card text-card-foreground;
+.leaflet-container {
+  font-family: inherit;
 }
 
-.dark .leaflet-popup-tip {
-  @apply bg-card;
+.flood-marker {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: var(--map-marker);
+  border: 3px solid var(--panel);
+  box-shadow: 0 0 0 2px var(--stroke);
+}
+
+.asset-marker {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--map-asset);
+  border: 2px solid var(--panel);
+  box-shadow: 0 0 0 1px var(--stroke);
+}
+
+.dark .asset-marker,
+.dark .flood-marker {
+  border-color: var(--accent-ink);
+  box-shadow: 0 0 0 1px rgba(7, 16, 31, 0.7);
+}
+
+.leaflet-popup-content {
+  margin: 0;
+}
+
+.leaflet-popup-content-wrapper {
+  @apply bg-card text-card-foreground rounded-lg shadow-lg;
+}
+
+.leaflet-popup-tip {
+  background: var(--panel);
 }
