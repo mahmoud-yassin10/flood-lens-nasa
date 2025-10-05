@@ -2,7 +2,7 @@ name: Build & Deploy Flood Lens (Vite) to GitHub Pages
 
 on:
   push:
-    branches: [ main, freeze-* ]
+    branches: [ main, freeze-*, first-commit ] 
   workflow_dispatch:
     inputs:
       ref:
@@ -12,7 +12,7 @@ on:
 
 permissions:
   contents: read
-  pages: write
+  pages: write  
   id-token: write
 
 concurrency:
@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
+            ref: ${{ inputs.ref || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
