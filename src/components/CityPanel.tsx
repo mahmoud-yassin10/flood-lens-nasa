@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Database, Satellite, Search } from "lucide-react";
 import { useState } from "react";
+import { ThemeAndBasemapToggle } from "./ThemeAndBasemapToggle";
 
 export function CityPanel() {
   const {
@@ -54,6 +55,9 @@ export function CityPanel() {
           </div>
           <Satellite className="h-8 w-8 text-primary" />
         </div>
+
+        {/* Theme and Basemap Controls */}
+        <ThemeAndBasemapToggle />
 
         {/* Manual Mode Toggle */}
         {manualMode && (

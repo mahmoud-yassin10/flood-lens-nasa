@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useCityStore } from "@/store/cityStore";
+import { Basemaps, BasemapKey } from "@/config/basemaps";
 
 // Fix Leaflet default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -15,8 +16,26 @@ export function MapView() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
+  const baseLayerRef = useRef<L.TileLayer | null>(null);
 
-  const { cities, selectedCity } = useCityStore();
+  const { cities, selectedCity, basemap } = useCityStore();
+
+  // Helper to add basemap layer
+  const addBaseLayer = (map: L.Map, key: BasemapKey) => {
+    const cfg = Basemaps[key];
+    if (!cfg) return null;
+
+    if (cfg.type === "wmts") {
+      const { layer, tileMatrixSet, time, attribution, maxZoom } = cfg.options;
+      const template = cfg.url
+        .replace("{Layer}", layer)
+        .replace("{Time}", time)
+        .replace("{TileMatrixSet}", tileMatrixSet);
+      return L.tileLayer(template, { attribution, maxZoom }).addTo(map);
+    }
+
+    return L.tileLayer(cfg.url, cfg.options).addTo(map);
+  };
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
@@ -28,14 +47,10 @@ export function MapView() {
       zoomControl: true,
     });
 
-    // Add base layer (light theme)
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      maxZoom: 19,
-    }).addTo(map);
+    // Add initial base layer
+    baseLayerRef.current = addBaseLayer(map, basemap);
 
     // Add NASA GIBS layer example (IMERG precipitation)
-    // Note: In production, this would use proper time dimension
     const today = new Date().toISOString().split("T")[0];
     L.tileLayer(
       `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/GPM_3IMERGHH/default/${today}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`,
@@ -51,6 +66,7 @@ export function MapView() {
     return () => {
       map.remove();
       mapInstance.current = null;
+      baseLayerRef.current = null;
     };
   }, []);
 
@@ -80,6 +96,19 @@ export function MapView() {
       markersRef.current.set(city.id, marker);
     });
   }, [cities]);
+
+  // Update basemap when changed
+  useEffect(() => {
+    if (!mapInstance.current) return;
+
+    // Remove old base layer
+    if (baseLayerRef.current) {
+      baseLayerRef.current.remove();
+    }
+
+    // Add new base layer
+    baseLayerRef.current = addBaseLayer(mapInstance.current, basemap);
+  }, [basemap]);
 
   // Pan to selected city
   useEffect(() => {
