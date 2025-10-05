@@ -64,19 +64,6 @@ This project is built with:
 
 Simply open [Lovable](https://lovable.dev/projects/bc15077f-9645-48d7-b937-834740693b9a) and click on Share -> Publish.
 
-## GitHub Pages Deployment
-
-This project is configured for automatic deployment to GitHub Pages via GitHub Actions.
-
-**Manual Mode on Pages**: The GitHub Pages build runs in **Manual Mode** (using cached data from `/public/data/manual/*.json`) because no backend is deployed. This allows the app to function as a static demo without requiring NASA Earthdata credentials.
-
-**To deploy**:
-1. Push to the `main` branch
-2. The GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) will automatically build and deploy to the `gh-pages` branch
-3. Your site will be available at: `https://<your-username>.github.io/flood-lens/`
-
-**To use live NASA data**: Deploy the FastAPI backend separately and set the `VITE_API_BASE_URL` environment variable during build to point to your backend API.
-
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!
