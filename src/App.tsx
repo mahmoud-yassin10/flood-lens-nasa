@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -10,6 +10,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="city=:cityId" element={<Index />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </QueryClientProvider>

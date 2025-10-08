@@ -1,0 +1,31 @@
+{
+  "cityId": "bahir_dar",
+  "prediction": {
+    "confidence": "low",
+    "notes": "Prediction uses HAND baseline blended with precip forecast proxy.",
+    "risk_index": 0.14,
+    "status": "forecast",
+    "valid_until": "2025-10-08T14:51:18.060186+00:00"
+  },
+  "rain": {
+    "api72": null,
+    "h24": null,
+    "h3": null,
+    "h72": null
+  },
+  "risk": {
+    "explanation": "Rainfall index 0.0, new water 0.0 km\u00b2, low HAND fraction 0.0%",
+    "level": "Low",
+    "score": 0.0
+  },
+  "sar": {
+    "age_hours": null,
+    "confidence": null,
+    "new_water_km2": null,
+    "pct_aoi": null
+  },
+  "terrain": {
+    "low_HAND_pct": null
+  },
+  "updated": "2025-10-08T11:51:17.478905+00:00"
+}

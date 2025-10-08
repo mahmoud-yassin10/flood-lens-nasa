@@ -1,5 +1,6 @@
-﻿import { useCallback, useEffect, useMemo, useRef } from "react";
-import { MapContainer, GeoJSON, Marker, Popup } from "react-leaflet";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MapContainer, GeoJSON, Marker, Popup, TileLayer, Pane } from "react-leaflet";
+import { useQuery } from "@tanstack/react-query";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -9,7 +10,10 @@ import { BaseLayerToggle } from "@/components/BaseLayerToggle";
 import { Button } from "@/components/ui/button";
 import { LocalClock } from "@/components/LocalClock";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Switch } from "@/components/ui/switch";
 import { BASEMAP_CHOICES, BASEMAP_LABELS, BasemapChoice, ThemeMode } from "@/lib/theme";
+import { useCityStore } from "@/store/cityStore";
+import { fetchCityLive, LiveCity } from "@/lib/live";
 
 interface MapViewProps {
   floods: FloodEventFeature[];
@@ -25,7 +29,6 @@ interface MapViewProps {
   isFullMapView: boolean;
 }
 
-const boundsPadding: L.PointExpression = [32, 32];
 
 export function MapView({
   floods,
@@ -41,6 +44,33 @@ export function MapView({
   isFullMapView,
 }: MapViewProps) {
   const mapRef = useRef<L.Map | null>(null);
+  const sarInitializedRef = useRef(false);
+  const { selectedCityId } = useCityStore();
+  const [showSarOverlay, setShowSarOverlay] = useState(false);
+
+  const { data: liveCity } = useQuery<LiveCity>({
+    queryKey: ["city-live", selectedCityId],
+    queryFn: () => fetchCityLive(selectedCityId!),
+    enabled: Boolean(selectedCityId),
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+
+  const sarTiles = liveCity?.tiles;
+  const sarOverlayKey = sarTiles ? `${sarTiles.template}|${sarTiles.minzoom ?? ""}|${sarTiles.maxzoom ?? ""}` : null;
+  const sarOverlayAvailable = Boolean(sarOverlayKey);
+
+  useEffect(() => {
+    if (!sarOverlayKey) {
+      sarInitializedRef.current = false;
+      setShowSarOverlay(false);
+      return;
+    }
+    if (!sarInitializedRef.current) {
+      sarInitializedRef.current = true;
+      setShowSarOverlay(true);
+    }
+  }, [sarOverlayKey]);
 
   const selectedFlood = useMemo(() => {
     return floods.find((feature) => feature.properties.id === selectedFloodId) ?? floods[0] ?? null;
@@ -82,7 +112,6 @@ export function MapView({
 
   const fullMapLabel = isFullMapView ? "Exit full map" : "Full map view";
 
-
   const handleMapReady = useCallback(
     (map: L.Map) => {
       mapRef.current = map;
@@ -105,7 +134,6 @@ export function MapView({
     [handleFeatureClick],
   );
 
-
   const centroid = selectedFlood ? floodCentroid(selectedFlood) : { lat: 0, lng: 0 };
 
   return (
@@ -120,6 +148,20 @@ export function MapView({
       >
         <BaseLayerToggle mode={themeMode} choice={basemapChoice} />
 
+        {sarOverlayAvailable ? (
+          <Pane name="sar-overlay" style={{ zIndex: 650 }}>
+            {showSarOverlay && sarTiles ? (
+              <TileLayer
+                url={sarTiles.template}
+                opacity={0.6}
+                minZoom={sarTiles.minzoom ?? 0}
+                maxZoom={sarTiles.maxzoom ?? 22}
+                pane="sar-overlay"
+              />
+            ) : null}
+          </Pane>
+        ) : null}
+
         <GeoJSON
           key={selectedFlood?.properties.id ?? "floods"}
           data={floodCollection as any}
@@ -127,7 +169,8 @@ export function MapView({
             const isSelected = feature?.properties?.id === selectedFlood?.properties.id;
             return {
               color: "var(--map-flood)",
-              weight: isSelected ? 2.5 : 1,
+              weight: isSelected ? 3 : 1.5,
+              opacity: isSelected ? 0.9 : 0.6,
               fillColor: "var(--map-flood)",
               fillOpacity: isSelected ? 0.35 : 0.18,
             };
@@ -225,6 +268,16 @@ export function MapView({
           </ToggleGroup>
         </div>
 
+        {sarOverlayAvailable ? (
+          <div className="pointer-events-auto flex items-center justify-between gap-4 rounded-md border bg-panel/95 p-3 shadow-lg backdrop-blur">
+            <div>
+              <p className="text-sm font-semibold">New water (SAR)</p>
+              <p className="text-xs text-muted-foreground">Latest detections overlay</p>
+            </div>
+            <Switch checked={showSarOverlay} onCheckedChange={setShowSarOverlay} aria-label="Toggle SAR new water overlay" />
+          </div>
+        ) : null}
+
         <div className="pointer-events-auto rounded-md border bg-panel/95 p-3 text-xs shadow-lg backdrop-blur">
           <p className="font-semibold text-sm">Legend</p>
           <ul className="mt-2 space-y-1">
@@ -251,8 +304,3 @@ export function MapView({
     </div>
   );
 }
-
-
-
-
-

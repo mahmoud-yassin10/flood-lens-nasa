@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+﻿import { Badge } from "@/components/ui/badge";
 import { AlertCircle, AlertTriangle, CheckCircle } from "lucide-react";
 
 interface RiskBadgeProps {
@@ -27,7 +27,7 @@ export function RiskBadge({ risk, size = "default" }: RiskBadgeProps) {
 
   return (
     <Badge variant="outline" className={`${className} gap-1 font-semibold`}>
-      <Icon className={`h-${iconSize} w-${iconSize}`} />
+      <Icon style={{ width: iconSize, height: iconSize }} />
       {risk} Risk
     </Badge>
   );

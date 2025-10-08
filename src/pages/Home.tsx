@@ -1,19 +1,17 @@
-﻿import { useMemo, useRef, useState } from "react";
-import type L from "leaflet";
+import { useEffect, useMemo, useRef, useState } from "react";
+import L, { type Map as LeafletMap } from "leaflet";
 
 import floodsRaw from "@/data/floods.geojson?raw";
 import assetsRaw from "@/data/assets.geojson?raw";
 import { MapView } from "@/components/MapView";
 import { FloodDetailsDrawer } from "@/components/FloodDetailsDrawer";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { LocalClock } from "@/components/LocalClock";
-import { Button } from "@/components/ui/button";
+import { CityPanel } from "@/components/CityPanel";
 import type { AssetFeature, AssetFeatureCollection, FloodEventFeature, FloodFeatureCollection } from "@/types/geo";
-import { impactedAssets, formatIsoRange } from "@/lib/geo";
+import { impactedAssets, cityBounds } from "@/lib/geo";
 import { cn } from "@/lib/utils";
-import { BASEMAP_CHOICES, BasemapChoice, ThemeMode, useThemeMode } from "@/lib/theme";
+import { BasemapChoice, ThemeMode, useThemeMode } from "@/lib/theme";
+import { useCityStore } from "@/store/cityStore";
 
 function safeParseJSON<T>(raw: string, label: string): T {
   const cleaned = raw.replace(/^\uFEFF/, "").trim().replace(/^'|'$/g, "");
@@ -24,6 +22,16 @@ function safeParseJSON<T>(raw: string, label: string): T {
     console.error(`[Flood-Lens] Failed to parse ${label}. Preview:`, preview);
     throw error;
   }
+}
+
+function extractCityIdFromHash(): string | null {
+  if (typeof window === "undefined") return null;
+  const raw = window.location.hash;
+  if (!raw) return null;
+  const stripped = raw.replace(/^#/, "");
+  const withoutLeadingSlash = stripped.startsWith("/") ? stripped.slice(1) : stripped;
+  const params = new URLSearchParams(withoutLeadingSlash.includes("?") ? withoutLeadingSlash.split("?")[1] : withoutLeadingSlash);
+  return params.get("city");
 }
 
 const floodsCollection = safeParseJSON<FloodFeatureCollection>(floodsRaw, "floods.geojson");
@@ -37,7 +45,44 @@ export default function Home() {
   const [isFullMapView, setIsFullMapView] = useState(false);
   const [selectedFloodId, setSelectedFloodId] = useState<string>(FLOODS[0]?.properties.id ?? "");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+
+  const { cities, selectedCityId, setSelectedCityId } = useCityStore();
+
+  const selectedCity = useMemo(() => {
+    if (!selectedCityId) return null;
+    return cities.find((city) => city.id === selectedCityId) ?? null;
+  }, [cities, selectedCityId]);
+
+  useEffect(() => {
+    const fromHash = extractCityIdFromHash();
+    if (fromHash) {
+      setSelectedCityId(fromHash);
+    }
+  }, [setSelectedCityId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handleHashChange = () => {
+      const nextId = extractCityIdFromHash();
+      if (nextId) {
+        setSelectedCityId(nextId);
+      }
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, [setSelectedCityId]);
+
+  useEffect(() => {
+    if (!selectedCity || !mapRef.current || !mapReady) return;
+    const bounds = cityBounds(selectedCity);
+    const nextBounds = L.latLngBounds(bounds[0], bounds[1]);
+    if (!nextBounds.isValid()) return;
+    mapRef.current.fitBounds(nextBounds, { padding: [32, 32] });
+  }, [selectedCity?.id, mapReady]);
 
   const impactedByFlood = useMemo(() => {
     return FLOODS.reduce<Record<string, AssetFeature[]>>((acc, flood) => {
@@ -51,10 +96,10 @@ export default function Home() {
   }, [selectedFloodId]);
 
   const selectedImpacted = useMemo(() => impactedByFlood[selectedFloodId] ?? [], [impactedByFlood, selectedFloodId]);
-  const selectedTimezone = selectedFlood?.properties.timezone ?? "UTC";
+
   const mapSectionClass = cn(
     "relative rounded-xl bg-panel p-3 shadow-sm",
-    isFullMapView ? "col-span-full h-[calc(100vh-160px)] sm:h-[calc(100vh-200px)]" : "h-[70vh] min-h-[420px]"
+    isFullMapView ? "col-span-full h-[calc(100vh-160px)] sm:h-[calc(100vh-200px)]" : "h-[70vh] min-h-[420px]",
   );
 
   const handleThemeChange = (mode: ThemeMode) => {
@@ -82,13 +127,12 @@ export default function Home() {
               selectedFloodId={selectedFloodId}
               themeMode={themeMode}
               basemapChoice={basemapChoice}
-              onSelectFlood={(id) => {
-                setSelectedFloodId(id);
-              }}
+              onSelectFlood={setSelectedFloodId}
               onChangeBasemap={setBasemapChoice}
               onOpenDetails={() => setDrawerOpen(true)}
               onMapReady={(map) => {
                 mapRef.current = map;
+                setMapReady(true);
               }}
               onToggleFullMap={() => setIsFullMapView((prev) => !prev)}
               isFullMapView={isFullMapView}
@@ -97,85 +141,8 @@ export default function Home() {
         </section>
 
         {!isFullMapView && (
-          <aside className="flex h-[70vh] flex-col gap-4">
-            <div className="rounded-xl border border-border bg-panel p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">Flood events</h2>
-                <p className="text-xs text-muted-foreground">Choose a flood to inspect on the map</p>
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {FLOODS.length} active
-              </Badge>
-            </div>
-
-            <Select value={selectedFloodId} onValueChange={setSelectedFloodId}>
-              <SelectTrigger className="mt-4 bg-panel">
-                <SelectValue placeholder="Select a flood" />
-              </SelectTrigger>
-              <SelectContent>
-                {FLOODS.map((flood) => (
-                  <SelectItem key={flood.properties.id} value={flood.properties.id}>
-                    {flood.properties.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {selectedFlood ? (
-              <div className="mt-4 space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">Location:</span>
-                  <span className="text-muted-foreground">
-                    {selectedFlood.properties.admin1 ?? "-"}, {selectedFlood.properties.country} ({selectedFlood.properties.iso3})
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold">Period:</span>
-                  <span className="text-muted-foreground">
-                    {formatIsoRange(selectedFlood.properties.start, selectedFlood.properties.end)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold">Local time:</span>
-                  <LocalClock timezone={selectedTimezone} />
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold">Impacted assets:</span>
-                  <span className="text-muted-foreground">{selectedImpacted.length}</span>
-                </div>
-                {selectedFlood.properties.severity ? (
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">Severity:</span>
-                    <Badge variant="outline" className="text-xs uppercase">
-                      {selectedFlood.properties.severity}
-                    </Badge>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            <Button className="mt-6 w-full" variant="default" onClick={() => setDrawerOpen(true)} disabled={!selectedFlood}>
-              View full details
-            </Button>
-          </div>
-
-          <div className="rounded-xl border border-border bg-panel p-4 shadow-sm">
-            <h3 className="text-base font-semibold">Basemap mode</h3>
-            <p className="text-xs text-muted-foreground">Auto matches the active theme.</p>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-              {BASEMAP_CHOICES.map((choice) => (
-                <Button
-                  key={choice}
-                  variant={choice === basemapChoice ? "default" : "outline"}
-                  className="justify-center"
-                  onClick={() => setBasemapChoice(choice)}
-                >
-                  {choice.charAt(0).toUpperCase() + choice.slice(1)}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <aside className="h-[70vh] min-h-[420px] overflow-hidden">
+            <CityPanel />
           </aside>
         )}
       </main>
@@ -190,15 +157,3 @@ export default function Home() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-

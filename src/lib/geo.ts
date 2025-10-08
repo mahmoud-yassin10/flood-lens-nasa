@@ -1,5 +1,6 @@
 ﻿import * as turf from "@turf/turf";
 import type { AssetFeature, FloodEventFeature } from "@/types/geo";
+import type { City } from "@/types/city";
 
 export const MAX_ASSET_MARKERS = 2000;
 
@@ -49,7 +50,7 @@ export function countAssetsByType(assets: AssetFeature[]): { type: string; count
 }
 
 export function formatIsoRange(start?: string, end?: string): string {
-  if (!start && !end) return "—";
+  if (!start && !end) return "-";
   if (start && !end) return new Date(start).toLocaleString();
   if (!start && end) return new Date(end).toLocaleString();
   const startDt = new Date(start!);
@@ -57,3 +58,19 @@ export function formatIsoRange(start?: string, end?: string): string {
   return `${startDt.toLocaleString()} -> ${endDt.toLocaleString()}`;
 }
 
+export function cityBounds(city: City): [[number, number], [number, number]] {
+  const latDelta = city.radius_km / 111;
+  const cosLat = Math.cos((city.lat * Math.PI) / 180);
+  const lonDenominator = Math.max(Math.abs(cosLat) * 111, 0.01);
+  const lonDelta = city.radius_km / lonDenominator;
+
+  const minLat = Math.max(-90, city.lat - latDelta);
+  const maxLat = Math.min(90, city.lat + latDelta);
+  const minLon = Math.max(-180, city.lon - lonDelta);
+  const maxLon = Math.min(180, city.lon + lonDelta);
+
+  return [
+    [minLat, minLon],
+    [maxLat, maxLon],
+  ];
+}
