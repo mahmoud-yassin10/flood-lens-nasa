@@ -1,26 +1,38 @@
-﻿"""Sentinel-1 SAR water extent helpers."""
+"""Sentinel-1 SAR water extent helpers."""
 
 from __future__ import annotations
 
 import logging
 import math
 import os
+import re
+import tempfile
 import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Optional, Tuple
+from urllib.parse import urljoin
 
 import asf_search as asf
 import numpy as np
 import rasterio
+import requests  # type: ignore[import]
 from PIL import Image
+from requests.auth import HTTPBasicAuth
 from skimage import filters, morphology
 
-from pipeline.utils.aoi import aoi_to_wkt
+from pipeline.utils.aoi import aoi_to_wkt as _aoi_to_wkt
+from pipeline.utils.downloads import download_with_auth
 from .utils import CityDescriptor, tileset_path
 
 LOGGER = logging.getLogger(__name__)
-DOWNLOAD_BASE = Path(os.getenv("FLOOD_LENS_SAR_CACHE", "/tmp/flood_lens/sar"))
+
+_configured_cache = os.getenv("FLOOD_LENS_SAR_CACHE")
+if _configured_cache:
+    DOWNLOAD_BASE = Path(_configured_cache)
+else:
+    DOWNLOAD_BASE = Path(tempfile.gettempdir()) / "flood_lens" / "sar"
+DOWNLOAD_BASE.mkdir(parents=True, exist_ok=True)
 NEW_WATER_COLOR = (0, 136, 204, 160)
 VV_SUFFIX = "_VV.tif"
 VH_SUFFIX = "_VH.tif"
@@ -29,60 +41,210 @@ TILE_ZOOM_MIN = 8
 TILE_ZOOM_MAX = 14
 
 
-def _sentinel1_platform():
+def _earthdata_auth() -> Optional[HTTPBasicAuth]:
+    username = os.getenv("EARTHDATA_USERNAME")
+    password = os.getenv("EARTHDATA_PASSWORD")
+    if username and password:
+        return HTTPBasicAuth(username, password)
+    return None
+
+
+def _list_dir_for_tifs(dir_url: str, session: requests.Session) -> list[str]:
+    response = session.get(dir_url, timeout=60)
+    response.raise_for_status()
+    hrefs = re.findall(r'href="([^"]+)"', response.text, flags=re.IGNORECASE)
+    return [
+        urljoin(dir_url, href)
+        for href in hrefs
+        if re.search(r"\.(tif|tiff)$", href, flags=re.IGNORECASE)
+    ]
+
+
+def _pick_preferred_tif(urls: list[str]) -> Optional[str]:
+    if not urls:
+        return None
+    vv = [u for u in urls if re.search(r"_VV\.tif$", u, flags=re.IGNORECASE)]
+    if vv:
+        return vv[0]
+    vh = [u for u in urls if re.search(r"_VH\.tif$", u, flags=re.IGNORECASE)]
+    if vh:
+        return vh[0]
+    return urls[0]
+
+
+def _prop(product, *keys, default=None):
+    props = getattr(product, "properties", {}) or {}
+    for key in keys:
+        value = props.get(key)
+        if value not in (None, "", []):
+            return value
+    for key in keys:
+        value = getattr(product, key, None)
+        if value not in (None, "", []):
+            return value
+    return default
+
+
+def _iso_to_dt(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except Exception:
+        try:
+            return datetime.strptime(value, "%Y-%m-%d %H:%M:%S%z")
+        except Exception:
+            return None
+
+
+def search_s1(
+    aoi,
+    *,
+    start: datetime,
+    end: datetime,
+    max_results: int,
+) -> list:
+    wkt = _aoi_to_wkt(aoi)
     platform_constant = getattr(asf, "PLATFORM", None)
-    if platform_constant and hasattr(platform_constant, "SENTINEL1"):
-        return platform_constant.SENTINEL1
-    return "SENTINEL-1"
+    platform = [platform_constant.SENTINEL1] if platform_constant and hasattr(platform_constant, "SENTINEL1") else ["SENTINEL-1"]
+
+    return asf.geo_search(
+        intersectsWith=wkt,
+        platform=platform,
+        beamMode="IW",
+        polarization=["VV", "VV+VH"],
+        processingLevel=["GRD", "GRD_HD", "GRD_MD", "RTC"],
+        start=start.isoformat(),
+        end=end.isoformat(),
+        maxResults=max_results,
+    )
 
 
-def search_s1(aoi, *, start: datetime, end: datetime, max_results: int, beam_mode, polarization, processing_level, flight_direction):
-    wkt = aoi_to_wkt(aoi)
-    params = {
-        "intersectsWith": wkt,
-        "start": start,
-        "end": end,
-        "maxResults": max_results,
-        "beamMode": beam_mode,
-        "polarization": polarization,
-        "processingLevel": processing_level,
-        "flightDirection": flight_direction,
-        "platform": _sentinel1_platform(),
-    }
-    return asf.geo_search(**params)
+def _normalize_products(products: list) -> list:
+    normalized = []
+    for product in products:
+        scene_id = _prop(product, "sceneName", "fileID", "displayId", "granuleName", default=None)
+        start_time = _iso_to_dt(_prop(product, "startTime", "startDate", "start_time"))
+        stop_time = _iso_to_dt(_prop(product, "stopTime", "stopDate", "stop_time"))
+        processing = _prop(product, "processingLevel", "processing_type", "processingLevelDisplay")
+        dataset = _prop(product, "dataset", "collectionName", "datasetShortName", "productType")
+        download_url = _prop(product, "url", "downloadUrl", "dataUrl")
+        normalized.append(
+            {
+                "product": product,
+                "scene_id": scene_id,
+                "start": start_time,
+                "stop": stop_time,
+                "processing": processing,
+                "dataset": dataset,
+                "download_url": download_url,
+            }
+        )
+    return normalized
 
 
-def _download_latest_scene(bbox: Tuple[float, float, float, float], days: int) -> Optional[Path]:
+def _choose_product(candidates: list) -> Optional[dict]:
+    if not candidates:
+        return None
+
+    def processing_rank(value: Optional[str]) -> int:
+        if not value:
+            return 3
+        token = value.upper()
+        if "RTC" in token:
+            return 0
+        if token == "GRD_HD":
+            return 1
+        if token == "GRD_MD":
+            return 2
+        return 3
+
+    def sort_key(item: dict):
+        rank = processing_rank(item.get("processing"))
+        timestamp = item.get("start") or item.get("stop") or datetime.min.replace(tzinfo=timezone.utc)
+        ts_value = -timestamp.timestamp() if hasattr(timestamp, "timestamp") else float("inf")
+        return (rank, ts_value)
+
+    return min(candidates, key=sort_key)
+
+
+def _download_latest_scene(bbox: Tuple[float, float, float, float], days: int) -> Optional[tuple[Path, Optional[datetime]]]:
     now = datetime.now(timezone.utc)
     start = now - timedelta(days=days)
     results = search_s1(
         bbox,
         start=start,
         end=now,
-        max_results=MAX_SCENES,
-        beam_mode=["IW"],
-        polarization=["VV+VH", "VV VH", "VV"],
-        processing_level=["RTC", "GRD"],
-        flight_direction=["ASCENDING", "DESCENDING"],
+        max_results=max(MAX_SCENES, 100),
     )
     if not results:
         LOGGER.warning("No Sentinel-1 scenes found for bbox %s in last %s days", bbox, days)
         return None
 
-    DOWNLOAD_BASE.mkdir(parents=True, exist_ok=True)
-    scene = sorted(results, key=lambda s: s.properties.get("startTime", ""), reverse=True)[0]
-    target_dir = DOWNLOAD_BASE / scene.scene_id
+    normalized = _normalize_products(results)
+    chosen = _choose_product(normalized)
+    if chosen is None:
+        LOGGER.warning("Unable to select Sentinel-1 product for bbox %s", bbox)
+        return None
+
+    product = chosen["product"]
+    scene_id = chosen.get("scene_id") or getattr(product, "scene_id", None) or getattr(product, "granuleName", None)
+    if not scene_id:
+        scene_id = f"sentinel_{chosen.get('start') or chosen.get('stop') or now:%Y%m%d%H%M%S}"
+    acquisition = chosen.get("start") or chosen.get("stop")
+
+    auth = _earthdata_auth()
+    dataset_name = (chosen.get("dataset") or _prop(product, "dataset") or "").upper()
+    download_url = chosen.get("download_url") or _prop(product, "url", "downloadUrl", "dataUrl")
+    target_dir = DOWNLOAD_BASE / scene_id
     if target_dir.exists():
-        return target_dir
+        return target_dir, acquisition
 
-    archive_path = DOWNLOAD_BASE / f"{scene.scene_id}.zip"
-    LOGGER.info("Downloading Sentinel-1 scene %s", scene.scene_id)
-    scene.download(str(archive_path))
+    if "OPERA_L2_RTC-S1" in dataset_name and download_url:
+        session = requests.Session()
+        if auth:
+            session.auth = auth
+        try:
+            base_url = download_url.rsplit("/", 1)[0] + "/"
+            tif_urls = _list_dir_for_tifs(base_url, session)
+            tif_url = _pick_preferred_tif(tif_urls)
+            if not tif_url:
+                LOGGER.warning("OPERA RTC product %s has no GeoTIFFs at %s", scene_id, base_url)
+                return None
+            target_dir.mkdir(parents=True, exist_ok=True)
+            filename = tif_url.rstrip("/").split("/")[-1]
+            local_tif = target_dir / filename
+            with session.get(tif_url, stream=True, timeout=300) as resp:
+                resp.raise_for_status()
+                with local_tif.open("wb") as handle:
+                    for chunk in resp.iter_content(1 << 20):
+                        if chunk:
+                            handle.write(chunk)
+            return target_dir, acquisition
+        finally:
+            session.close()
 
-    with zipfile.ZipFile(archive_path, "r") as zf:
-        zf.extractall(target_dir)
-    archive_path.unlink(missing_ok=True)
-    return target_dir
+    if download_url:
+        download_path = download_with_auth(download_url, out_dir=DOWNLOAD_BASE, auth=auth)
+    else:
+        LOGGER.info("Using ASF product.download fallback for %s", scene_id)
+        archive_path = DOWNLOAD_BASE / f"{scene_id}.zip"
+        product.download(str(archive_path))
+        download_path = archive_path
+
+    if download_path.is_dir():
+        return download_path, acquisition
+
+    if download_path.suffix.lower() == ".zip":
+        extract_dir = DOWNLOAD_BASE / download_path.stem
+        extract_dir.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(download_path, "r") as zf:
+            zf.extractall(extract_dir)
+        download_path.unlink(missing_ok=True)
+        return extract_dir, acquisition
+
+    LOGGER.warning("Downloaded Sentinel-1 product %s is not an archive; path=%s", scene_id, download_path)
+    return None
 
 
 def _find_band(root: Path, suffix: str) -> Optional[Path]:
@@ -149,9 +311,10 @@ def detect_new_water(
 ) -> Dict[str, float | int | str]:
     """Detect new water extent using Sentinel-1 SAR imagery."""
 
-    scene_dir = _download_latest_scene(bbox, days)
-    if scene_dir is None:
+    scene_info = _download_latest_scene(bbox, days)
+    if scene_info is None:
         return {"new_water_km2": 0.0, "pct_aoi": 0.0, "age_hours": days * 24}
+    scene_dir, acquisition_time = scene_info
 
     vv_path = _find_band(scene_dir, VV_SUFFIX)
     vh_path = _find_band(scene_dir, VH_SUFFIX)
@@ -183,14 +346,8 @@ def detect_new_water(
     bbox_area_km2 = abs((bbox[2] - bbox[0]) * (bbox[3] - bbox[1]) * 111.32 * 111.32 * math.cos(math.radians(mean_lat)))
     pct_aoi = 0.0 if bbox_area_km2 <= 0 else min(100.0, (new_water_km2 / bbox_area_km2) * 100.0)
 
-    acquisition_time = datetime.now(timezone.utc)
-    for part in scene_dir.name.split("_"):
-        if part.startswith("A") and len(part) >= 16:
-            try:
-                acquisition_time = datetime.strptime(part[1:16], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
-                break
-            except ValueError:
-                continue
+    if acquisition_time is None:
+        acquisition_time = datetime.now(timezone.utc)
     age_hours = int((datetime.now(timezone.utc) - acquisition_time).total_seconds() / 3600)
 
     tiles_template: Optional[str] = None

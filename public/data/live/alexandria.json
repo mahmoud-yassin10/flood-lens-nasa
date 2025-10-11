@@ -1,31 +1,31 @@
 {
   "cityId": "alexandria",
   "prediction": {
-    "confidence": "low",
+    "confidence": "medium",
     "notes": "Prediction uses HAND baseline blended with precip forecast proxy.",
     "risk_index": 0.0,
     "status": "forecast",
-    "valid_until": "2025-10-08T18:22:58.135700+00:00"
+    "valid_until": "2025-10-11T22:28:50.253385+00:00"
   },
   "rain": {
     "api72": null,
-    "h24": null,
+    "h24": 4.389285625579457,
     "h3": null,
     "h72": null
   },
   "risk": {
-    "explanation": "Rainfall index 0.0, new water 0.0 km\u00b2, low HAND fraction 0.0%",
+    "explanation": "Rainfall index 4.4, new water 0.0 km\u00b2, low HAND fraction 0.0%",
     "level": "Low",
-    "score": 0.0
+    "score": 2.6
   },
   "sar": {
-    "age_hours": null,
+    "age_hours": 72.0,
     "confidence": null,
-    "new_water_km2": null,
-    "pct_aoi": null
+    "new_water_km2": 0.0,
+    "pct_aoi": 0.0
   },
   "terrain": {
     "low_HAND_pct": null
   },
-  "updated": "2025-10-08T15:22:57.181718+00:00"
+  "updated": "2025-10-11T19:28:49.566556+00:00"
 }

@@ -10,53 +10,60 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Iterator, Optional, Sequence, Tuple
 
-import certifi
+import certifi  # type: ignore[import]
 import numpy as np
-import requests
-import xarray as xr
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+import requests  # type: ignore[import]
+import xarray as xr  # type: ignore[import]
+from requests.adapters import HTTPAdapter  # type: ignore[import]
+from urllib3.util.retry import Retry  # type: ignore[import]
 
+from pipeline.sources.imerg_pps import imerg_pps_aggregate
 from .utils import CityDescriptor
 
 LOGGER = logging.getLogger(__name__)
-COLLECTION = {
-    "final": "https://gpm1.gesdisc.eosdis.nasa.gov/data/GPM_L3/GPM_3IMERGHH.07",
-    "late": "https://gpm1.gesdisc.eosdis.nasa.gov/data/GPM_L3/GPM_3IMERGHH_L.07",
-    "early": "https://gpm1.gesdisc.eosdis.nasa.gov/data/GPM_L3/GPM_3IMERGHH_E.07",
-}
+
 CACHE_ROOT = Path.home() / ".cache" / "flood_lens" / "imerg"
 HALF_HOUR = timedelta(minutes=30)
 DECAY_K = 0.88
 
+COLLECTION = {
+    "final": "https://gpm1.gesdisc.eosdis.nasa.gov/data/GPM_L3/GPM_3IMERGHH.07",
+    "late": "https://gpm1.gesdisc.eosdis.nasa.gov/data/GPM_L3/GPM_3IMERGHHL.07",
+    "early": "https://gpm1.gesdisc.eosdis.nasa.gov/data/GPM_L3/GPM_3IMERGHHE.07",
+    "early_legacy": "https://gpm1.gesdisc.eosdis.nasa.gov/data/GPM_L3/GPM_3IMERGHH_E.07",
+}
 
-class DownloadError(RuntimeError):
-    """Raised when an IMERG granule cannot be retrieved."""
+HOSTS = ("gpm1", "gpm2")
+
+_SESSION = requests.Session()
+_SESSION.verify = certifi.where()
+_SESSION.headers.update({"User-Agent": "floodlens-imerg/1.0"})
+_RETRY = Retry(
+    total=3,
+    backoff_factor=1,
+    status_forcelist=(429, 500, 502, 503, 504),
+    allowed_methods=frozenset({"GET", "HEAD"}),
+)
+_SESSION.mount("https://", HTTPAdapter(max_retries=_RETRY))
+_SESSION.mount("http://", HTTPAdapter(max_retries=_RETRY))
 
 
-def _create_session(auth: Optional[Tuple[str, str]] = None) -> requests.Session:
-    if auth is None:
-        username = os.getenv("EARTHDATA_USERNAME")
-        password = os.getenv("EARTHDATA_PASSWORD")
-        if not username or not password:
-            raise EnvironmentError("EARTHDATA_USERNAME and EARTHDATA_PASSWORD must be set")
-    else:
-        username, password = auth
+def _env_auth() -> Optional[Tuple[str, str]]:
+    username = os.getenv("EARTHDATA_USERNAME")
+    password = os.getenv("EARTHDATA_PASSWORD")
+    if username and password:
+        return username, password
+    return None
 
-    session = requests.Session()
-    session.verify = certifi.where()
-    session.auth = (username, password)
-    session.headers.update({"User-Agent": "floodlens-imerg/1.0"})
-    retry = Retry(
-        total=3,
-        backoff_factor=1,
-        status_forcelist=(429, 500, 502, 503, 504),
-        allowed_methods=frozenset({"GET"}),
-    )
-    adapter = HTTPAdapter(max_retries=retry)
-    session.mount("https://", adapter)
-    session.mount("http://", adapter)
-    return session
+
+def _clean_value(value: Optional[float]) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        scalar = float(value)
+    except (TypeError, ValueError):
+        return None
+    return None if math.isnan(scalar) else scalar
 
 
 def _floor_to_half_hour(moment: datetime) -> datetime:
@@ -65,27 +72,29 @@ def _floor_to_half_hour(moment: datetime) -> datetime:
     return moment_utc.replace(minute=minute, second=0, microsecond=0)
 
 
-def _granule_meta(start: datetime, run: str) -> Tuple[str, str, str]:
-    start_utc = start.astimezone(timezone.utc)
-    end_utc = start_utc + HALF_HOUR - timedelta(seconds=1)
-    year = start_utc.strftime("%Y")
-    month = start_utc.strftime("%m")
+def _imerg_fname(run: str, slot: datetime) -> str:
+    slot_utc = slot.astimezone(timezone.utc)
+    slot_end = slot_utc + HALF_HOUR - timedelta(seconds=1)
+    ymd = slot_utc.strftime("%Y%m%d")
+    start_token = slot_utc.strftime("%H%M%S")
+    end_token = slot_end.strftime("%H%M%S")
     if run == "late":
         prefix = "3B-HHR-L"
     elif run == "early":
         prefix = "3B-HHR-E"
     else:
         prefix = "3B-HHR"
-    filename = (
-        f"{prefix}.MS.MRG.3IMERG.{start_utc:%Y%m%d}-S{start_utc:%H%M%S}-E{end_utc:%H%M%S}.V07B.HDF5"
-    )
-    return year, month, filename
+    return f"{prefix}.MS.MRG.3IMERG.{ymd}-S{start_token}-E{end_token}.V07B.HDF5"
 
 
-def _url_for_slot(start: datetime, run: str) -> str:
-    year, month, filename = _granule_meta(start, run)
-    base = COLLECTION[run]
-    return f"{base}/{year}/{month}/{filename}"
+def _url_path_ymd(base: str, run: str, slot: datetime) -> str:
+    slot_utc = slot.astimezone(timezone.utc)
+    return f"{base}/{slot_utc:%Y}/{slot_utc:%m}/{slot_utc:%d}/{_imerg_fname(run, slot_utc)}"
+
+
+def _url_path_ym(base: str, run: str, slot: datetime) -> str:
+    slot_utc = slot.astimezone(timezone.utc)
+    return f"{base}/{slot_utc:%Y}/{slot_utc:%m}/{_imerg_fname(run, slot_utc)}"
 
 
 def _slots_30m_utc(start: datetime, end: datetime) -> Iterator[datetime]:
@@ -97,20 +106,37 @@ def _slots_30m_utc(start: datetime, end: datetime) -> Iterator[datetime]:
         current += HALF_HOUR
 
 
-def _preflight(url: str, session: requests.Session) -> None:
-    try:
-        response = session.head(url, auth=session.auth, allow_redirects=False, timeout=20)
-        LOGGER.info("IMERG preflight HEAD %s -> %s", url, response.status_code)
-        if response.status_code in (301, 302, 303, 307, 308):
-            LOGGER.warning(
-                "IMERG preflight redirect. Ensure your Earthdata profile authorizes 'NASA GESDISC DATA ARCHIVE'."
-            )
-        elif response.status_code == 401:
-            LOGGER.warning(
-                "IMERG preflight 401 Unauthorized. Verify EARTHDATA_USERNAME/PASSWORD and GES DISC authorization."
-            )
-    except Exception as exc:  # noqa: BLE001
-        LOGGER.warning("IMERG preflight failed: %s", exc)
+def _preflight_slot(run: str, slot: datetime, auth: Optional[Tuple[str, str]]) -> None:
+    base_candidates: Tuple[str, ...]
+    if run == "early":
+        base_candidates = (COLLECTION["early"], COLLECTION["early_legacy"])
+    else:
+        base_candidates = (COLLECTION[run],)
+
+    for host in HOSTS:
+        for base in base_candidates:
+            base_url = base.replace("gpm1.", f"{host}.")
+            for builder in (_url_path_ym, _url_path_ymd):
+                url = builder(base_url, run, slot)
+                try:
+                    response = _SESSION.head(url, auth=auth, allow_redirects=False, timeout=20)
+                    LOGGER.info("IMERG preflight HEAD %s -> %s", url, response.status_code)
+                    if response.status_code == 404:
+                        continue
+                    if response.status_code in (301, 302, 303, 307, 308):
+                        LOGGER.warning(
+                            "IMERG preflight redirect. Ensure your Earthdata profile authorizes 'NASA GESDISC DATA ARCHIVE'."
+                        )
+                    elif response.status_code == 401:
+                        LOGGER.warning(
+                            "IMERG preflight 401 Unauthorized. Verify EARTHDATA_USERNAME/PASSWORD and GES DISC authorization."
+                        )
+                    return
+                except Exception as exc:  # noqa: BLE001
+                    LOGGER.warning("IMERG preflight failed: %s", exc)
+                    return
+
+    LOGGER.debug("IMERG preflight: no reachable URL for run=%s slot=%s", run, slot)
 
 
 def _runs_for_preference(prefer_run: str) -> Tuple[str, ...]:
@@ -121,53 +147,75 @@ def _runs_for_preference(prefer_run: str) -> Tuple[str, ...]:
     return ("late", "early")
 
 
+def _fetch(url: str, auth: Optional[Tuple[str, str]], timeout: int = 60) -> Optional[bytes]:
+    try:
+        response = _SESSION.get(url, auth=auth, stream=True, timeout=timeout, allow_redirects=True)
+        if response.status_code == 404:
+            LOGGER.debug("IMERG 404: %s", url)
+            return None
+        response.raise_for_status()
+        return response.content
+    except requests.exceptions.ReadTimeout:
+        LOGGER.warning("IMERG timeout: %s", url)
+        return None
+
+
+def _fetch_slot(run: str, slot: datetime, auth: Optional[Tuple[str, str]]) -> Optional[bytes]:
+    bases: Tuple[str, ...]
+    if run == "early":
+        bases = (COLLECTION["early"], COLLECTION["early_legacy"])
+    else:
+        bases = (COLLECTION[run],)
+
+    for host in HOSTS:
+        for base in bases:
+            url_base = base.replace("gpm1.", f"{host}.")
+            for builder in (_url_path_ym, _url_path_ymd):
+                url = builder(url_base, run, slot)
+                blob = _fetch(url, auth)
+                if blob is not None:
+                    return blob
+    return None
+
+
 @contextmanager
-def _open_granule(start: datetime, session: requests.Session, runs: Sequence[str]) -> Iterator[Optional[str]]:
+def _open_granule(start: datetime, runs: Sequence[str], auth: Optional[Tuple[str, str]]) -> Iterator[Optional[str]]:
     runs_tuple = tuple(runs)
     if not runs_tuple:
         yield None
         return
 
-    year, month, filename = _granule_meta(start)
-    cache_dir = CACHE_ROOT / year / month
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    cached = cache_dir / filename
+    slot_utc = start.astimezone(timezone.utc)
+    year = slot_utc.strftime("%Y")
+    month = slot_utc.strftime("%m")
+    day = slot_utc.strftime("%d")
 
-    if cached.exists():
-        try:
+    # Return cached granule if already present for any run.
+    for run in runs_tuple:
+        filename = _imerg_fname(run, start)
+        cached = CACHE_ROOT / run / year / month / day / filename
+        if cached.exists():
             yield str(cached)
-        except Exception:
-            cached.unlink(missing_ok=True)
-            raise
-        return
+            return
 
     last_error: Optional[Exception] = None
     for run in runs_tuple:
-        url = _url_for_slot(start, run)
-        try:
-            response = session.get(url, stream=True, timeout=180)
-        except requests.exceptions.ReadTimeout:
-            LOGGER.warning("IMERG timed out: %s", url)
-            continue
-        if response.status_code == 401:
-            last_error = EnvironmentError("Earthdata credentials rejected; check EARTHDATA_USERNAME/PASSWORD")
-            break
-        if response.status_code == 404:
-            LOGGER.debug("IMERG missing (404) [%s]: %s", run, url)
-            continue
-        if not response.ok:
-            last_error = DownloadError(f"Failed to download {url}: {response.status_code}")
-            continue
+        filename = _imerg_fname(run, start)
+        cache_dir = CACHE_ROOT / run / year / month / day
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        cached = cache_dir / filename
 
-        with cached.open("wb") as handle:
-            for chunk in response.iter_content(chunk_size=1_048_576):
-                handle.write(chunk)
+        blob = _fetch_slot(run, start, auth)
+        if blob is None:
+            continue
         try:
+            cached.write_bytes(blob)
             yield str(cached)
-        except Exception:
+            return
+        except Exception as exc:  # noqa: BLE001
             cached.unlink(missing_ok=True)
-            raise
-        return
+            last_error = exc
+            continue
 
     if last_error:
         LOGGER.warning("IMERG download failed for %s: %s", start, last_error)
@@ -208,6 +256,9 @@ def aggregate_imerg(
     auth: Optional[Tuple[str, str]] = None,
     prefer_run: str = "late",
 ) -> Optional[Dict[str, float]]:
+    if auth is None:
+        auth = _env_auth()
+
     prefer_run = prefer_run if prefer_run in ("late", "early", "final") else "late"
     runs = _runs_for_preference(prefer_run)
     slots = list(_slots_30m_utc(start, end))
@@ -223,28 +274,36 @@ def aggregate_imerg(
         LOGGER.warning("IMERG: empty slot list for bbox %s", bbox)
         return None
 
-    session = _create_session(auth)
     mm_steps: list[float] = []
-    try:
+    if auth:
         if runs:
-            first_url = _url_for_slot(slots[0], runs[0])
-            _preflight(first_url, session)
+            _preflight_slot(runs[0], slots[0], auth)
         for slot in slots:
-            with _open_granule(slot, session, runs) as local_path:
+            with _open_granule(slot, runs, auth) as local_path:
                 if local_path is None:
                     continue
                 mm_steps.append(_clip_precip(local_path, bbox))
-    finally:
-        session.close()
+    else:
+        LOGGER.warning("IMERG: Earthdata credentials missing; skipping GES DISC download.")
 
     if not mm_steps:
         LOGGER.warning(
-            "IMERG: no granules in window (%s..%s, run=%s) for bbox %s.",
+            "IMERG: no GES DISC granules in window (%s..%s, run=%s) for bbox %s; attempting PPS fallback.",
             start,
             end,
             prefer_run,
             bbox,
         )
+        pps_run = prefer_run if prefer_run in ("late", "early") else "late"
+        pps = imerg_pps_aggregate(bbox, start, end, prefer=pps_run)
+        if pps:
+            return {
+                "h3": _clean_value(pps.get("h0_3")),
+                "h24": _clean_value(pps.get("h24")),
+                "h72": None,
+                "api72": None,
+            }
+        LOGGER.warning("IMERG PPS fallback unavailable; returning None.")
         return None
 
     h3 = sum(mm_steps[-6:])
