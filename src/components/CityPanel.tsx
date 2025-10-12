@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Satellite, Search } from "lucide-react";
 
 import { useCityStore } from "@/store/cityStore";
@@ -6,6 +7,9 @@ import { fetchCities } from "@/lib/api";
 import { CityCard } from "@/components/CityCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { City } from "@/types/city";
+import { cityBbox } from "@/lib/geo";
+import { fitToBbox } from "@/lib/mapInstance";
 
 export function CityPanel() {
   const { cities, selectedCityId, groupFilter, setCities, setSelectedCityId, setGroupFilter } = useCityStore();
@@ -52,10 +56,24 @@ export function CityPanel() {
     });
   }, [cities, groupFilter, searchQuery]);
 
-  const handlePick = (id: string) => {
-    setSelectedCityId(id);
-    window.location.hash = `city=${id}`;
-  };
+  const queryClient = useQueryClient();
+
+  const handlePick = useCallback(
+    (target: City) => {
+      setSelectedCityId(target.id);
+      if (typeof window !== "undefined") {
+        window.location.hash = `/?city=${target.id}`;
+      }
+
+      const bbox = cityBbox(target);
+      fitToBbox(bbox);
+      window.requestAnimationFrame(() => fitToBbox(bbox));
+      window.setTimeout(() => fitToBbox(bbox), 250);
+
+      void queryClient.invalidateQueries({ queryKey: ["city-live", target.id] });
+    },
+    [fitToBbox, queryClient, setSelectedCityId],
+  );
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-panel shadow-sm">
@@ -123,7 +141,7 @@ export function CityPanel() {
               key={city.id}
               city={city}
               selected={selectedCityId === city.id}
-              onClick={() => handlePick(city.id)}
+              onSelect={handlePick}
             />
           ))
         )}
@@ -135,3 +153,4 @@ export function CityPanel() {
     </div>
   );
 }
+

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import L, { type Map as LeafletMap } from "leaflet";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
+import type { Map as LeafletMap } from "leaflet";
 
 import floodsRaw from "@/data/floods.geojson?raw";
 import assetsRaw from "@/data/assets.geojson?raw";
@@ -8,7 +8,8 @@ import { FloodDetailsDrawer } from "@/components/FloodDetailsDrawer";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CityPanel } from "@/components/CityPanel";
 import type { AssetFeature, AssetFeatureCollection, FloodEventFeature, FloodFeatureCollection } from "@/types/geo";
-import { impactedAssets, cityBounds } from "@/lib/geo";
+import { impactedAssets, cityBbox } from "@/lib/geo";
+import { fitToBbox, setMapInstance } from "@/lib/mapInstance";
 import { cn } from "@/lib/utils";
 import { BasemapChoice, ThemeMode, useThemeMode } from "@/lib/theme";
 import { useCityStore } from "@/store/cityStore";
@@ -77,12 +78,30 @@ export default function Home() {
   }, [setSelectedCityId]);
 
   useEffect(() => {
-    if (!selectedCity || !mapRef.current || !mapReady) return;
-    const bounds = cityBounds(selectedCity);
-    const nextBounds = L.latLngBounds(bounds[0], bounds[1]);
-    if (!nextBounds.isValid()) return;
-    mapRef.current.fitBounds(nextBounds, { padding: [32, 32] });
-  }, [selectedCity?.id, mapReady]);
+    if (!selectedCity || !mapReady) return;
+    fitToBbox(cityBbox(selectedCity));
+  }, [selectedCity, mapReady]);
+
+  useEffect(() => {
+    return () => {
+      mapRef.current = null;
+      setMapInstance(null);
+    };
+  }, []);
+
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const previousOverflow = document.body.style.overflow;
+    if (isFullMapView) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = previousOverflow;
+    }
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isFullMapView]);
 
   const impactedByFlood = useMemo(() => {
     return FLOODS.reduce<Record<string, AssetFeature[]>>((acc, flood) => {
@@ -98,8 +117,13 @@ export default function Home() {
   const selectedImpacted = useMemo(() => impactedByFlood[selectedFloodId] ?? [], [impactedByFlood, selectedFloodId]);
 
   const mapSectionClass = cn(
-    "relative rounded-xl bg-panel p-3 shadow-sm",
-    isFullMapView ? "col-span-full h-[calc(100vh-160px)] sm:h-[calc(100vh-200px)]" : "h-[70vh] min-h-[420px]",
+    "relative bg-panel shadow-sm transition-all",
+    isFullMapView ? "fixed inset-0 z-[2000] m-0 overflow-hidden rounded-none p-0 sm:p-3 bg-[var(--bg)]" : "rounded-xl p-3"
+  );
+
+  const mapWrapperClass = cn(
+    "w-full",
+    isFullMapView ? "h-screen" : "h-[70vh] min-h-[420px]"
   );
 
   const handleThemeChange = (mode: ThemeMode) => {
@@ -120,7 +144,7 @@ export default function Home() {
 
       <main className={cn("grid gap-6 px-6 py-6", !isFullMapView && "lg:grid-cols-[2fr,1fr]")}>
         <section className={mapSectionClass}>
-          <div className="h-full">
+          <div className={mapWrapperClass}>
             <MapView
               floods={FLOODS}
               impactedByFlood={impactedByFlood}
@@ -133,6 +157,7 @@ export default function Home() {
               onMapReady={(map) => {
                 mapRef.current = map;
                 setMapReady(true);
+                setMapInstance(map);
               }}
               onToggleFullMap={() => setIsFullMapView((prev) => !prev)}
               isFullMapView={isFullMapView}
@@ -157,3 +182,5 @@ export default function Home() {
     </div>
   );
 }
+
+

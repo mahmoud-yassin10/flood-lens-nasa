@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, GeoJSON, Marker, Popup, TileLayer, Pane } from "react-leaflet";
 import { useQuery } from "@tanstack/react-query";
 import L from "leaflet";
@@ -10,7 +10,6 @@ import { BaseLayerToggle } from "@/components/BaseLayerToggle";
 import { Button } from "@/components/ui/button";
 import { LocalClock } from "@/components/LocalClock";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Switch } from "@/components/ui/switch";
 import { BASEMAP_CHOICES, BASEMAP_LABELS, BasemapChoice, ThemeMode } from "@/lib/theme";
 import { useCityStore } from "@/store/cityStore";
 import { fetchCityLive, LiveCity } from "@/lib/live";
@@ -57,11 +56,12 @@ export function MapView({
   });
 
   const sarTiles = liveCity?.tiles;
-  const sarOverlayKey = sarTiles ? `${sarTiles.template}|${sarTiles.minzoom ?? ""}|${sarTiles.maxzoom ?? ""}` : null;
-  const sarOverlayAvailable = Boolean(sarOverlayKey);
+  const sarTemplate = sarTiles?.template;
+  const sarOverlayKey = sarTemplate ? `${sarTemplate}|${sarTiles?.minzoom ?? ""}|${sarTiles?.maxzoom ?? ""}` : null;
+  const sarOverlayAvailable = Boolean(sarTemplate);
 
   useEffect(() => {
-    if (!sarOverlayKey) {
+    if (!sarOverlayAvailable) {
       sarInitializedRef.current = false;
       setShowSarOverlay(false);
       return;
@@ -70,7 +70,16 @@ export function MapView({
       sarInitializedRef.current = true;
       setShowSarOverlay(true);
     }
-  }, [sarOverlayKey]);
+  }, [sarOverlayAvailable, sarOverlayKey]);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+    const timeout = window.setTimeout(() => {
+      map.invalidateSize();
+    }, isFullMapView ? 240 : 120);
+    return () => window.clearTimeout(timeout);
+  }, [isFullMapView]);
 
   const selectedFlood = useMemo(() => {
     return floods.find((feature) => feature.properties.id === selectedFloodId) ?? floods[0] ?? null;
@@ -116,6 +125,9 @@ export function MapView({
     (map: L.Map) => {
       mapRef.current = map;
       onMapReady?.(map);
+      window.setTimeout(() => {
+        map.invalidateSize();
+      }, 120);
     },
     [onMapReady],
   );
@@ -141,7 +153,7 @@ export function MapView({
       <MapContainer
         center={[centroid.lat, centroid.lng]}
         zoom={6}
-        className="h-full w-full rounded-xl border border-border"
+        className={`h-full w-full border border-border ${isFullMapView ? "rounded-none" : "rounded-xl"}`}
         scrollWheelZoom
         whenCreated={handleMapReady}
         preferCanvas
@@ -274,7 +286,16 @@ export function MapView({
               <p className="text-sm font-semibold">New water (SAR)</p>
               <p className="text-xs text-muted-foreground">Latest detections overlay</p>
             </div>
-            <Switch checked={showSarOverlay} onCheckedChange={setShowSarOverlay} aria-label="Toggle SAR new water overlay" />
+            <Button
+              id="sarToggle"
+              type="button"
+              size="sm"
+              variant={showSarOverlay ? "default" : "outline"}
+              aria-pressed={showSarOverlay}
+              onClick={() => setShowSarOverlay((prev) => !prev)}
+            >
+              {showSarOverlay ? "Hide" : "Show"}
+            </Button>
           </div>
         ) : null}
 
@@ -304,3 +325,4 @@ export function MapView({
     </div>
   );
 }
+

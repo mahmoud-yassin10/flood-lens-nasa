@@ -3,9 +3,9 @@
   "prediction": {
     "confidence": "low",
     "notes": "Prediction uses HAND baseline blended with precip forecast proxy.",
-    "risk_index": 0.04,
+    "risk_index": 0.0,
     "status": "forecast",
-    "valid_until": "2025-10-08T18:14:47.635112+00:00"
+    "valid_until": "2025-10-12T03:13:18.031693+00:00"
   },
   "rain": {
     "api72": null,
@@ -27,5 +27,5 @@
   "terrain": {
     "low_HAND_pct": null
   },
-  "updated": "2025-10-08T15:14:47.222307+00:00"
+  "updated": "2025-10-12T00:13:17.311554+00:00"
 }

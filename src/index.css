@@ -161,3 +161,8 @@
 .leaflet-popup-tip {
   background: var(--panel);
 }
+
+.na {
+  color: var(--muted);
+  opacity: 0.85;
+}

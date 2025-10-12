@@ -1,5 +1,6 @@
-﻿export type LiveCity = {
+export type LiveCity = {
   cityId: string;
+  tz?: string;
   updated: string;
   rain: { h3: number | null; h24: number | null; h72: number | null; api72: number | null };
   sar: {
@@ -22,7 +23,8 @@
 };
 
 export async function fetchCityLive(id: string): Promise<LiveCity> {
-  const base = import.meta.env.BASE_URL ?? "/";
+  const base =
+    (typeof window !== "undefined" && window.__BASE_URL__) || import.meta.env.BASE_URL || "/flood-lens-nasa/";
   const res = await fetch(`${base}data/live/${id}.json`, { cache: "no-store" });
   if (res.status === 404) {
     const err = new Error("NO_DATA");

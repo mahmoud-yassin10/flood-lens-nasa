@@ -49,13 +49,30 @@ export function countAssetsByType(assets: AssetFeature[]): { type: string; count
     .sort((a, b) => b.count - a.count);
 }
 
+const DATETIME_DISPLAY_OPTS: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+};
+
+function formatDateTime(value?: string | null): string | null {
+  if (!value) return null;
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt.toLocaleString(undefined, DATETIME_DISPLAY_OPTS);
+}
+
 export function formatIsoRange(start?: string, end?: string): string {
   if (!start && !end) return "-";
-  if (start && !end) return new Date(start).toLocaleString();
-  if (!start && end) return new Date(end).toLocaleString();
-  const startDt = new Date(start!);
-  const endDt = new Date(end!);
-  return `${startDt.toLocaleString()} -> ${endDt.toLocaleString()}`;
+  const startLabel = formatDateTime(start);
+  const endLabel = formatDateTime(end);
+  if (startLabel && !endLabel) return startLabel;
+  if (!startLabel && endLabel) return endLabel;
+  if (!startLabel && !endLabel) return "-";
+  return `${startLabel} -> ${endLabel}`;
 }
 
 export function cityBounds(city: City): [[number, number], [number, number]] {
@@ -73,4 +90,9 @@ export function cityBounds(city: City): [[number, number], [number, number]] {
     [minLat, minLon],
     [maxLat, maxLon],
   ];
+}
+
+export function cityBbox(city: City): [number, number, number, number] {
+  const [[minLat, minLon], [maxLat, maxLon]] = cityBounds(city);
+  return [minLon, minLat, maxLon, maxLat];
 }

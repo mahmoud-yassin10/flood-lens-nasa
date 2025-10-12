@@ -25,7 +25,6 @@ LOGGER = logging.getLogger(__name__)
 CACHE_ROOT = Path.home() / ".cache" / "flood_lens" / "imerg"
 HALF_HOUR = timedelta(minutes=30)
 DECAY_K = 0.88
-
 COLLECTION = {
     "final": "https://gpm1.gesdisc.eosdis.nasa.gov/data/GPM_L3/GPM_3IMERGHH.07",
     "late": "https://gpm1.gesdisc.eosdis.nasa.gov/data/GPM_L3/GPM_3IMERGHHL.07",

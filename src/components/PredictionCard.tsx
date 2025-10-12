@@ -1,4 +1,6 @@
-import React from "react";
+﻿import React from "react";
+
+import { confidenceBadge } from "@/ui/format";
 
 type Pred = {
   status: "fallback_static" | "persistence" | "forecast";
@@ -8,44 +10,60 @@ type Pred = {
   notes?: string;
 };
 
-function badgeClass(c: Pred["confidence"]) {
-  if (c === "high") return "bg-green-100 text-green-800";
-  if (c === "medium") return "bg-amber-100 text-amber-900";
-  return "bg-gray-200 text-gray-800";
-}
+const STATUS_EXPLANATION: Record<Pred["status"], string> = {
+  forecast: "Blended HAND baseline and short-term precipitation signal.",
+  persistence: "Based on recent SAR \"new water\" extent with exponential decay.",
+  fallback_static: "HAND-only baseline (no fresh SAR/IMERG inputs).",
+};
+
+const VALID_UNTIL_FORMAT: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+};
+
 
 export function PredictionCard({ prediction }: { prediction?: Pred | null }) {
   if (!prediction) return null;
-  const pct = Math.round((prediction.risk_index ?? 0) * 100);
-  const label =
-    prediction.status === "forecast"
-      ? "Forecast blend"
-      : prediction.status === "persistence"
-      ? "Persistence"
-      : "HAND baseline";
+
+  const pct = Math.round(Math.max(0, Math.min(1, prediction.risk_index ?? 0)) * 100);
+  const status = prediction.status ?? "fallback_static";
+  const explanation = STATUS_EXPLANATION[status] ?? STATUS_EXPLANATION.fallback_static;
+  const notes = prediction.notes ? ` ${prediction.notes}` : "";
 
   return (
-    <div className="rounded-2xl border border-gray-200 p-4 shadow-sm bg-white">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">
-          Predicted flood risk
-        </h3>
-        <span className={`px-2 py-0.5 text-xs rounded-full ${badgeClass(prediction.confidence)}`}>
-          {prediction.confidence}
-        </span>
+    <div className="rounded-xl border border-border bg-panel/80 p-4 shadow-sm transition-colors">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-foreground">Predicted flood risk</h3>
+        {confidenceBadge(prediction.confidence)}
       </div>
-      <div className="mt-3">
-        <div className="flex items-baseline gap-2">
-          <div className="text-3xl font-bold">{pct}<span className="text-xl">%</span></div>
-          <div className="text-xs uppercase tracking-wide text-gray-500">{label}</div>
+
+      <div className="mt-3 space-y-2">
+        <div className="relative h-2 w-full overflow-hidden rounded-full bg-foreground/10">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 transition-all"
+            style={{ width: `${pct}%` }}
+          />
         </div>
-        {prediction.notes ? (
-          <p className="mt-2 text-sm text-gray-600">{prediction.notes}</p>
-        ) : null}
-        {prediction.valid_until ? (
-          <p className="mt-1 text-xs text-gray-400">Valid until {new Date(prediction.valid_until).toLocaleString()}</p>
-        ) : null}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{pct}% risk index</span>
+          {prediction.valid_until ? (
+            <span>
+              Valid until {new Date(prediction.valid_until).toLocaleString(undefined, VALID_UNTIL_FORMAT)}
+            </span>
+          ) : null}
+        </div>
       </div>
+
+      <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
+        {explanation}
+        {notes}
+      </p>
     </div>
   );
 }
+
+

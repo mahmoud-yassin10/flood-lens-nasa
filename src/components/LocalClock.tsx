@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -24,7 +24,8 @@ export function LocalClock({ timezone, className = "" }: LocalClockProps) {
 
   return (
     <div className={`font-mono text-sm ${className}`}>
-      {time.format("HH:mm:ss")}
+      {time.format("hh:mm:ss A")}
     </div>
   );
 }
+

@@ -1,11 +1,11 @@
 {
-  "cityId": "bahir_dar",
+  "cityId": "khartoum",
   "prediction": {
-    "confidence": "low",
+    "confidence": "medium",
     "notes": "Prediction uses HAND baseline blended with precip forecast proxy.",
-    "risk_index": 0.034,
+    "risk_index": 0.0,
     "status": "forecast",
-    "valid_until": "2025-10-12T02:15:19.890326+00:00"
+    "valid_until": "2025-10-12T04:12:10.527798+00:00"
   },
   "rain": {
     "api72": null,
@@ -19,13 +19,13 @@
     "score": 0.0
   },
   "sar": {
-    "age_hours": null,
+    "age_hours": 72.0,
     "confidence": null,
-    "new_water_km2": null,
-    "pct_aoi": null
+    "new_water_km2": 0.0,
+    "pct_aoi": 0.0
   },
   "terrain": {
     "low_HAND_pct": null
   },
-  "updated": "2025-10-11T23:15:19.325366+00:00"
+  "updated": "2025-10-12T01:12:09.906143+00:00"
 }
