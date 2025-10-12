@@ -1,73 +1,107 @@
-# Welcome to your Lovable project
+﻿# Flood-Lens NASA Space Apps
 
-## Project info
+Flood-Lens provides near-real-time situational awareness for flood response. The web app consumes live JSON summaries generated from NASA Earthdata services and renders risk, rainfall, and SAR-derived flood extents for each monitored city.
 
-**URL**: https://lovable.dev/projects/bc15077f-9645-48d7-b937-834740693b9a
+## What is live right now?
 
-## How can I edit this code?
+- **IMERG precipitation** — half-hourly accumulations aggregated over the city bounding box (0–72 hours, API72 decay).
+- **Sentinel-1 SAR (new water)** — adaptive thresholding on the latest RTC/GRD scene to highlight newly inundated areas and optional tiles for quick sharing.
+- **HAND & elevation** — SRTM-derived Height Above Nearest Drainage (fallback to ≤10 m elevation proxy) to flag low-lying terrain.
 
-There are several ways of editing your application.
+### LiveCity schema (per `public/data/live/<id>.json`)
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/bc15077f-9645-48d7-b937-834740693b9a) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```jsonc
+{
+  "cityId": "alexandria",
+  "updated": "2025-10-06T23:15:04.123Z",
+  "rain": { "h3": 2.1, "h24": 18.7, "h72": 42.3, "api72": 7.6 },
+  "sar": {
+    "age_hours": 9,
+    "new_water_km2": 12.4,
+    "pct_aoi": 6.2,
+    "confidence": "medium",
+    "tiles_template": "tiles/alexandria/sar_202510062030/{z}/{x}/{y}.png"
+  },
+  "terrain": { "low_HAND_pct": 31.5 },
+  "risk": {
+    "score": 62.4,
+    "level": "Medium",
+    "explanation": "Rainfall index 26.3, new water 12.4 km², low HAND fraction 31.5%."
+  },
+  "tiles": {
+    "template": "tiles/alexandria/sar_202510062030/{z}/{x}/{y}.png",
+    "minzoom": 8,
+    "maxzoom": 14
+  }
+}
 ```
 
-**Edit a file directly in GitHub**
+## How to run locally
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. **Install JavaScript dependencies**
+   ```bash
+   npm install
+   ```
 
-**Use GitHub Codespaces**
+2. **Install pipeline dependencies** (requires Python 3.11)
+   ```bash
+   python -m pip install --upgrade pip
+   python -m pip install -r pipeline/requirements.txt
+   ```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+3. **Generate live data for a city** (requires Earthdata + ASF credentials as env vars)
+   ```bash
+   export EARTHDATA_USERNAME=... EARTHDATA_PASSWORD=...
+   export ASF_USER=... ASF_PASSWORD=...
+   python -m pipeline.run_city --city alexandria --write-tiles
+   ```
 
-## What technologies are used for this project?
+4. **Run the web app**
+   ```bash
+   npm run dev
+   ```
+   Open the printed URL (Vite default: http://localhost:5173).
 
-This project is built with:
+5. **Quick QA**
+   ```bash
+   npm run verify
+   ```
+   Ensures generated JSON stays within expected ranges.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Adding a new city
 
-## How can I deploy this project?
+Edit `public/data/cities.json` and add an entry with:
 
-Simply open [Lovable](https://lovable.dev/projects/bc15077f-9645-48d7-b937-834740693b9a) and click on Share -> Publish.
+```jsonc
+{
+  "id": "lagos",
+  "name": "Lagos, Nigeria",
+  "bbox": [3.0, 6.2, 3.6, 6.8],
+  "timezone": "Africa/Lagos"
+}
+```
 
-## Can I connect a custom domain to my Lovable project?
+- `bbox` is `[minLon, minLat, maxLon, maxLat]` (decimal degrees).
+- `timezone` should be an IANA TZ database identifier.
+- After adding the city, rerun `python -m pipeline.run_city --city lagos`.
 
-Yes, you can!
+## Risk & confidence at a glance
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- **Risk score/level** — simple fusion: rainfall (API72 + 24h), SAR new-water footprint, and low-HAND fraction. Score is 0–100, classified as Low (<40), Medium (40–70), High (≥70).
+- **Confidence** — SAR-driven:
+  - `high` if new_water_km2 > 5
+  - `medium` if 1–5 km²
+  - `low` if >0 but ≤1 km²
+  - `null` when no SAR detection is available.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Limits & caveats
+
+- **Latency** — IMERG and Sentinel-1 scenes typically appear 3–6 hours after acquisition; some cities may temporarily show “No recent data yet.”
+- **Coverage** — Sentinel-1 revisit can exceed 3 days in some regions; new-water will degrade to older detections (warning raised over 96 h).
+- **Optical data** — Not currently used; heavy cloud cover would impact optical alternatives.
+- **Credentials** — Earthdata and ASF credentials are required for automated runs (for GitHub Actions, store them in repository secrets).
+- **Licensing** — NASA GPM IMERG, Sentinel-1 data, and SRTM are free/open (see respective licenses); derived products and code released under this repository’s license.
+
+## Automation
+
+A GitHub Actions workflow (`.github/workflows/floodlens.yml`) refreshes all cities every 3 hours and commits updated live JSON + tiles when changes are detected.

@@ -1,0 +1,31 @@
+{
+  "cityId": "dhaka",
+  "prediction": {
+    "confidence": "medium",
+    "notes": "Prediction uses HAND baseline blended with precip forecast proxy.",
+    "risk_index": 0.0,
+    "status": "forecast",
+    "valid_until": "2025-10-12T10:07:29.166557+00:00"
+  },
+  "rain": {
+    "api72": null,
+    "h24": null,
+    "h3": null,
+    "h72": null
+  },
+  "risk": {
+    "explanation": "Rainfall index 0.0, new water 0.0 km\u00b2, low HAND fraction 0.0%",
+    "level": "Low",
+    "score": 0.0
+  },
+  "sar": {
+    "age_hours": 72.0,
+    "confidence": null,
+    "new_water_km2": 0.0,
+    "pct_aoi": 0.0
+  },
+  "terrain": {
+    "low_HAND_pct": null
+  },
+  "updated": "2025-10-12T07:07:28.462918+00:00"
+}

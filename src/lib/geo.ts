@@ -1,5 +1,6 @@
 ﻿import * as turf from "@turf/turf";
 import type { AssetFeature, FloodEventFeature } from "@/types/geo";
+import type { City } from "@/types/city";
 
 export const MAX_ASSET_MARKERS = 2000;
 
@@ -48,12 +49,50 @@ export function countAssetsByType(assets: AssetFeature[]): { type: string; count
     .sort((a, b) => b.count - a.count);
 }
 
-export function formatIsoRange(start?: string, end?: string): string {
-  if (!start && !end) return "—";
-  if (start && !end) return new Date(start).toLocaleString();
-  if (!start && end) return new Date(end).toLocaleString();
-  const startDt = new Date(start!);
-  const endDt = new Date(end!);
-  return `${startDt.toLocaleString()} -> ${endDt.toLocaleString()}`;
+const DATETIME_DISPLAY_OPTS: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+};
+
+function formatDateTime(value?: string | null): string | null {
+  if (!value) return null;
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt.toLocaleString(undefined, DATETIME_DISPLAY_OPTS);
 }
 
+export function formatIsoRange(start?: string, end?: string): string {
+  if (!start && !end) return "-";
+  const startLabel = formatDateTime(start);
+  const endLabel = formatDateTime(end);
+  if (startLabel && !endLabel) return startLabel;
+  if (!startLabel && endLabel) return endLabel;
+  if (!startLabel && !endLabel) return "-";
+  return `${startLabel} -> ${endLabel}`;
+}
+
+export function cityBounds(city: City): [[number, number], [number, number]] {
+  const latDelta = city.radius_km / 111;
+  const cosLat = Math.cos((city.lat * Math.PI) / 180);
+  const lonDenominator = Math.max(Math.abs(cosLat) * 111, 0.01);
+  const lonDelta = city.radius_km / lonDenominator;
+
+  const minLat = Math.max(-90, city.lat - latDelta);
+  const maxLat = Math.min(90, city.lat + latDelta);
+  const minLon = Math.max(-180, city.lon - lonDelta);
+  const maxLon = Math.min(180, city.lon + lonDelta);
+
+  return [
+    [minLat, minLon],
+    [maxLat, maxLon],
+  ];
+}
+
+export function cityBbox(city: City): [number, number, number, number] {
+  const [[minLat, minLon], [maxLat, maxLon]] = cityBounds(city);
+  return [minLon, minLat, maxLon, maxLat];
+}
