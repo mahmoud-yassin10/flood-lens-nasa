@@ -15,16 +15,16 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PYTHON_ENTRY: "python -m pipeline.run_city"
-  OUTPUT_DIR: "public/data"    # Vite copies public/* into dist/
-  # Fallback city list if cities.txt isn't present (used only by pipeline step)
-  CITIES: "alexandria cairo khartoum lagos tunis casablanca beirut nairobi mumbai dhaka jakarta manila bangkok karachi ho_chi_minh"
+  PYTHON_ENTRY: "python -m pipeline.run_city"   # optional, we '|| true' it
+  OUTPUT_DIR: "public/data"
   ALWAYS_OVERWRITE: "1"
   BRANCH_NAME: "Main"          # change to 'main' if your default branch is lowercase
+  # Fallback city IDs if cities.json is missing/broken. (Matches your app IDs.)
+  CITY_IDS: "alexandria gerd bahir_dar roseires sennar wad_madani khartoum jakarta manila bangkok hcmc dhaka mumbai lagos houston"
 
 jobs:
   data:
-    name: Generate fresh city data
+    name: Generate fresh LIVE data
     runs-on: ubuntu-latest
     steps:
       - name: Checkout ${{ env.BRANCH_NAME }}
@@ -45,26 +45,15 @@ jobs:
 
       - name: Ensure output dirs
         run: |
-          mkdir -p "$OUTPUT_DIR"
           mkdir -p "$OUTPUT_DIR/live"
 
-      - name: Choose city list for pipeline (optional)
-        id: cities
-        shell: bash
-        run: |
-          if [ -f cities.txt ]; then
-            echo "list=$(tr '\n' ' ' < cities.txt)" >> $GITHUB_OUTPUT
-          else
-            echo "list=$CITIES" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Run pipeline for each city (best-effort; OK if it fails)
+      - name: (Optional) Run pipeline (best-effort; OK if it fails)
         shell: bash
         env:
           PYTHON_ENTRY: ${{ env.PYTHON_ENTRY }}
         run: |
           set -euo pipefail
-          for CITY in ${{ steps.cities.outputs.list }}; do
+          for CITY in $CITY_IDS; do
             echo "=== Pipeline for $CITY ==="
             $PYTHON_ENTRY --city "$CITY" --days 3 --write || true
           done
@@ -74,12 +63,13 @@ jobs:
         env:
           OUTPUT_DIR: ${{ env.OUTPUT_DIR }}
           ALWAYS_OVERWRITE: ${{ env.ALWAYS_OVERWRITE }}
+          CITY_IDS: ${{ env.CITY_IDS }}
         run: |
           python scripts/seed_live_model.py
-          echo "---- Generated LIVE files (count should match cities.json):"
+          echo "---- LIVE files:"
           ls -1 "$OUTPUT_DIR/live" | wc -l
-          ls -al "$OUTPUT_DIR/live" | sed -n '1,120p'
-          echo "---- Sample (alexandria live head):"
+          ls -al "$OUTPUT_DIR/live" | sed -n '1,200p'
+          echo "---- Sample:"
           head -n 40 "$OUTPUT_DIR/live/alexandria.json" || true
 
       - name: Upload city data artifact
@@ -118,13 +108,6 @@ jobs:
         with:
           name: city-data
           path: ${{ env.OUTPUT_DIR }}
-
-      - name: List data bundled into build (debug)
-        run: |
-          echo "public/data before build:"
-          ls -al public/data || true
-          echo "public/data/live sample:"
-          head -n 20 public/data/live/alexandria.json || true
 
       - name: Build (Vite copies public/ → dist/)
         run: npm run build
