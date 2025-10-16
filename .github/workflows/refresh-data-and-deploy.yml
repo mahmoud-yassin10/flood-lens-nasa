@@ -2,12 +2,12 @@ name: Refresh data every 3h & Deploy Pages
 
 on:
   schedule:
-    # Runs at minute 0 every 3 hours (UTC)
+    # Runs at minute 0 every 3 hours (UTC): 00:00, 03:00, 06:00, ...
     - cron: "0 */3 * * *"
   workflow_dispatch:
 
 permissions:
-  contents: write        # commit refreshed data
+  contents: write        # commit refreshed/seeded data
   pages: write           # deploy to Pages
   id-token: write
 
@@ -16,11 +16,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Edit this to your actual pipeline module / entrypoint
+  # Python entry used to refresh real data (edit if your module is different)
   PYTHON_ENTRY: "python -m pipeline.run_city"
-  # Where the site reads JSON from (change to your actual folder)
+  # Where your site reads JSON from
   OUTPUT_DIR: "public/data"
-  # Default city list if cities.txt isn't present (space-separated)
+  # Default city list (used if cities.txt not present). Space-separated.
   CITIES: "alexandria cairo khartoum lagos tunis casablanca beirut nairobi mumbai dhaka jakarta manila bangkok karachi ho_chi_minh"
 
 jobs:
@@ -52,8 +52,7 @@ jobs:
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
 
       - name: Ensure output dir exists
-        run: |
-          mkdir -p "$OUTPUT_DIR"
+        run: mkdir -p "$OUTPUT_DIR"
 
       - name: Choose city list
         id: cities
@@ -65,34 +64,36 @@ jobs:
             echo "list=$CITIES" >> $GITHUB_OUTPUT
           fi
 
-      - name: Run pipeline for each city
+      - name: Run pipeline for each city (real data if available)
         shell: bash
+        env:
+          PYTHON_ENTRY: ${{ env.PYTHON_ENTRY }}
         run: |
           set -euo pipefail
           echo "Cities: ${{ steps.cities.outputs.list }}"
           for CITY in ${{ steps.cities.outputs.list }}; do
             echo "=== Running for $CITY ==="
-            # Example based on your earlier command:
+            # Example based on your local command:
             # python -m pipeline.run_city --city alexandria --days 3 --write
-            $PYTHON_ENTRY --city "$CITY" --days 3 --write
+            $PYTHON_ENTRY --city "$CITY" --days 3 --write || true
           done
 
-      - name: Move/collect outputs
+      - name: Seed model data for empty/missing files (safe mock)
         shell: bash
+        env:
+          OUTPUT_DIR: ${{ env.OUTPUT_DIR }}
+          CITIES: ${{ steps.cities.outputs.list }}
         run: |
-          # If your pipeline already wrote into $OUTPUT_DIR, you can skip this.
-          # Otherwise, copy/move from wherever your pipeline writes (adjust path).
-          # Example: mv -f pipeline/output/*.json "$OUTPUT_DIR"/ || true
-          echo "Collected refreshed data in $OUTPUT_DIR"
+          python scripts/seed_model_data.py
 
-      - name: Commit refreshed data (skip if no changes)
+      - name: Commit refreshed + seeded data (skip if no changes)
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$OUTPUT_DIR" || true
           if ! git diff --cached --quiet; then
-            git commit -m "chore(data): refresh city data [skip ci]"
+            git commit -m "chore(data): refresh/seed model data [skip ci]"
             git push
           else
             echo "No data changes to commit."
