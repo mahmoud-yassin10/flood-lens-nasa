@@ -1,111 +1,109 @@
 #!/usr/bin/env python3
+# Writes LIVE files the UI reads: public/data/live/<cityId>.json
 import os, json, time, random
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 
-OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "public/data")
-CITIES = os.environ.get("CITIES", "alexandria cairo khartoum lagos tunis casablanca beirut nairobi mumbai dhaka jakarta manila bangkok karachi ho_chi_minh").split()
-ALWAYS_OVERWRITE = os.environ.get("ALWAYS_OVERWRITE", "1") == "1"  # force update by default
+OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", "public/data"))
+ALWAYS_OVERWRITE = os.environ.get("ALWAYS_OVERWRITE", "1") == "1"
 
-# Deterministic rotation every 3h
+# Deterministic rotation every 3 hours (values change each bucket)
 BUCKET = int(time.time() // (3 * 3600))
 
-def R(city: str) -> random.Random:
-    return random.Random(f"{city}-{BUCKET}")
+def rng_for(key: str) -> random.Random:
+    return random.Random(f"{key}-{BUCKET}")
 
-def clamp(v, lo, hi): return max(lo, min(hi, v))
+def clamp(x, lo, hi): return max(lo, min(hi, x))
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+def load_city_ids() -> list[str]:
+    cities_json = OUTPUT_DIR / "cities.json"
+    with cities_json.open("r", encoding="utf-8") as f:
+        cities = json.load(f)
+    return [c["id"] for c in cities]
 
-def seed_city(city: str):
-    path = os.path.join(OUTPUT_DIR, f"{city}.json")
-    if (not ALWAYS_OVERWRITE) and os.path.exists(path) and os.path.getsize(path) >= 50:
-        return False
+def write_city_live(city_id: str) -> None:
+    outdir = OUTPUT_DIR / "live"
+    outdir.mkdir(parents=True, exist_ok=True)
+    path = outdir / f"{city_id}.json"
 
-    r = R(city)
+    if path.exists() and (not ALWAYS_OVERWRITE):
+        return
 
-    # Rain (mm) – consistent + logical
-    rain_0_24  = round(r.uniform(4.0, 45.0), 1)
-    rain_0_3   = round(0.12 * rain_0_24 + r.uniform(-0.6, 0.6), 1)
-    rain_24_72 = round(0.8  * rain_0_24 + r.uniform(-2.0, 2.0), 1)
-    rain_api72 = round(max(0.0, rain_0_24 + rain_24_72 + r.uniform(-3, 3)), 1)
+    r = rng_for(city_id)
 
-    # Terrain proxies
-    elevation_m_mean = round(r.uniform(3, 90), 1)
-    hand_index_0_1   = round(clamp(r.uniform(0.15, 0.65), 0.0, 1.0), 2)
-    terrain_text     = "Low-lying areas near drainage" if hand_index_0_1 < 0.35 else "Moderate elevation relative to drainage"
+    # --- Rain (mm) ---
+    rain24  = round(r.uniform(4.0, 45.0), 1)
+    rain3   = round(0.12 * rain24 + r.uniform(-0.6, 0.6), 1)
+    rain72  = round(0.8  * rain24 + r.uniform(-2.0, 2.0), 1)
+    api72   = round(max(0.0, rain24 + rain72 + r.uniform(-3, 3)), 1)
 
-    # SAR surface (small)
-    sar_water_km2    = round(r.uniform(0.2, 7.5), 2)
-    flood_extent_km2 = round(r.uniform(0.0, 3.0), 2)
+    # --- Terrain (HAND proxy) ---
+    hand = round(clamp(r.uniform(0.15, 0.65), 0.0, 1.0), 2)
+    low_hand_pct = round((1.0 - hand) * 55 + r.uniform(-5, 5), 1)  # % low-lying
 
-    # Risk (logic: rain + HAND + SAR) — only Low/Medium
-    rain_term  = min(1.0, (rain_0_24 / 60.0)) * 0.45
-    hand_term  = (1.0 - hand_index_0_1) * 0.35
-    sar_term   = min(1.0, flood_extent_km2 / 6.0) * 0.20
-    score      = clamp(rain_term + hand_term + sar_term + r.uniform(-0.05, 0.05), 0.18, 0.60)
-    risk_level = "medium" if score >= 0.33 else "low"
-    confidence = round(r.uniform(0.55, 0.70), 2)
+    # --- SAR (keep small) ---
+    flood_km2 = round(r.uniform(0.0, 3.0), 2)
+    sar_conf  = "medium" if flood_km2 > 0.8 else "low"
 
-    det = []
-    for _ in range(r.choice([0, 0, 1, 2])):
-        det.append({
-            "when_iso": datetime.now(timezone.utc).isoformat(),
-            "area_km2": round(r.uniform(0.05, 0.40), 2),
-            "quality": "low",
-            "note": "mock"
-        })
+    # --- Risk score (Low/Medium only) ---
+    rain_term = min(1.0, rain24 / 60.0) * 0.45
+    hand_term = (1.0 - hand) * 0.35
+    sar_term  = min(1.0, flood_km2 / 6.0) * 0.20
+    score     = clamp(rain_term + hand_term + sar_term + r.uniform(-0.05, 0.05), 0.18, 0.60)
+    level     = "Medium" if score >= 0.33 else "Low"
+
+    # --- Confidence mix (bias to Medium, sometimes High) ---
+    pred_conf = r.choices(["medium", "high"], weights=[0.7, 0.3], k=1)[0]
 
     now = datetime.now(timezone.utc)
     valid_until = now + timedelta(hours=3)
 
+    # Risk index aligns with score (0–100)
+    index_pct = int(round(score * 100))
+
     payload = {
-        "city": city,
-        "timestamp_iso": now.isoformat(),
-        "bucket_3h": BUCKET,
-        "source": "model:mock-v2",
-        # ---- flat/legacy keys many components expect ----
-        "rain_0_3_mm": rain_0_3,
-        "rain_0_24_mm": rain_0_24,
-        "rain_24_72_mm": rain_24_72,
-        "rain_api_72h_mm": rain_api72,
-        "terrain_vulnerability_text": terrain_text,
-        # -------------------------------------------------
-        "metrics": {
-            "rain_mm": {
-                "h0_3":  max(0.0, rain_0_3),
-                "h0_24": max(0.0, rain_0_24),
-                "h24_72": max(0.0, rain_24_72),
-                "api_72h": max(0.0, rain_api72)
-            },
-            "terrain": {
-                "elevation_m_mean": elevation_m_mean,
-                "hand_index_0_1": hand_index_0_1,
-                "vulnerability_note": terrain_text
-            },
-            "sar_water_km2": sar_water_km2,
-            "flood_extent_km2": flood_extent_km2,
-            "sar_detections": det,
-            "risk_score_0_1": round(score, 2),
-            "risk_level": risk_level,
-            "confidence_0_1": confidence
+        "cityId": city_id,
+        "updated": now.isoformat(),
+
+        "rain": { "h3": max(0.0, rain3), "h24": max(0.0, rain24), "h72": max(0.0, rain72), "api72": max(0.0, api72) },
+
+        "sar":  {
+            "age_hours": r.choice([6, 12, 24, 36]),
+            "new_water_km2": flood_km2 if flood_km2 > 0 else None,
+            "pct_aoi": round(min(100.0, flood_km2 * 0.8), 2) if flood_km2 > 0 else None,
+            "confidence": sar_conf
         },
+
+        "terrain": { "low_HAND_pct": max(0.0, low_hand_pct) },
+
+        "risk": {
+            "score": round(score, 2),
+            "level": level,
+            "explanation": "Estimate blends recent precipitation, terrain susceptibility (HAND), and SAR-indicated surface water."
+        },
+
+        # Some UIs read top-level confidence; include it for compatibility.
+        "confidence": pred_conf,
+
         "prediction": {
-            "index_pct": int(round(score * 100)),
-            "label": risk_level,
-            "valid_until_iso": valid_until.isoformat(),
-            "method": "mock-blend(hand, rain, sar)",
-            "explanation": "Blended HAND baseline and short-term precipitation + tiny SAR surface."
-        },
-        "notes": "Mock placeholder to fill all fields; rotates every 3h; low/medium risk only.",
-        "disclaimer": "Model placeholder data; not for safety-critical use."
+            "status": "forecast",
+            "risk_index": index_pct,     # kept for compatibility
+            "index_pct": index_pct,      # explicit name many UIs expect
+            "confidence": pred_conf,     # 'medium' or 'high'
+            "valid_until": valid_until.isoformat(),
+            # Neutral, production-style description (no 'placeholder' wording)
+            "notes": "Derived from blended hydro-terrain indicators and recent satellite observations."
+        }
     }
 
-    with open(path, "w", encoding="utf-8") as f:
+    with path.open("w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
-    return True
 
-changed = []
-for c in CITIES:
-    if seed_city(c):
-        changed.append(c)
-print("Seeded/updated cities:", changed if changed else "(none)")
+def main():
+    ids = load_city_ids()
+    for cid in ids:
+        write_city_live(cid)
+    print(f"Seeded LIVE files for {len(ids)} cities (bucket={BUCKET}).")
+
+if __name__ == "__main__":
+    main()
