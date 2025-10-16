@@ -3,20 +3,20 @@
   "prediction": {
     "confidence": "low",
     "notes": "Prediction uses HAND baseline blended with precip forecast proxy.",
-    "risk_index": 0.0,
+    "risk_index": 0.004,
     "status": "forecast",
-    "valid_until": "2025-10-12T03:13:18.031693+00:00"
+    "valid_until": "2025-10-12T22:04:12.979018+00:00"
   },
   "rain": {
     "api72": null,
-    "h24": null,
+    "h24": 4.282407510404785,
     "h3": null,
     "h72": null
   },
   "risk": {
-    "explanation": "Rainfall index 0.0, new water 0.0 km\u00b2, low HAND fraction 0.0%",
+    "explanation": "Rainfall index 4.3, new water 0.0 km\u00b2, low HAND fraction 0.0%",
     "level": "Low",
-    "score": 0.0
+    "score": 2.6
   },
   "sar": {
     "age_hours": null,
@@ -27,5 +27,5 @@
   "terrain": {
     "low_HAND_pct": null
   },
-  "updated": "2025-10-12T00:13:17.311554+00:00"
+  "updated": "2025-10-12T19:04:11.663202+00:00"
 }
