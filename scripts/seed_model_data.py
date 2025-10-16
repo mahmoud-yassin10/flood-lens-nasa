@@ -63,13 +63,13 @@ def seed_city(city: str):
         "timestamp_iso": now.isoformat(),
         "bucket_3h": BUCKET,
         "source": "model:mock-v2",
-        # ---- NEW: flat/legacy keys many components expect ----
+        # ---- flat/legacy keys many components expect ----
         "rain_0_3_mm": rain_0_3,
         "rain_0_24_mm": rain_0_24,
         "rain_24_72_mm": rain_24_72,
         "rain_api_72h_mm": rain_api72,
         "terrain_vulnerability_text": terrain_text,
-        # -------------------------------------------------------
+        # -------------------------------------------------
         "metrics": {
             "rain_mm": {
                 "h0_3":  max(0.0, rain_0_3),
@@ -109,4 +109,3 @@ for c in CITIES:
     if seed_city(c):
         changed.append(c)
 print("Seeded/updated cities:", changed if changed else "(none)")
-
