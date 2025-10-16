@@ -19,16 +19,18 @@ env:
   OUTPUT_DIR: "public/data"
   CITIES: "alexandria cairo khartoum lagos tunis casablanca beirut nairobi mumbai dhaka jakarta manila bangkok karachi ho_chi_minh"
   ALWAYS_OVERWRITE: "1"
+  BRANCH_NAME: "Main"     # <- your default branch name (case-sensitive)
 
 jobs:
   refresh-data:
     name: Build fresh city data
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
+      - name: Checkout ${{ env.BRANCH_NAME }} (not detached)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ env.BRANCH_NAME }}   # <- ensures we’re on the branch, not detached
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -82,14 +84,17 @@ jobs:
         run: |
           python scripts/seed_model_data.py
 
-      - name: Commit refreshed + seeded data (rebase & retry on conflicts)
+      - name: Commit refreshed + seeded data (rebase & push to ${{ env.BRANCH_NAME }})
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
+          git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Stage changes (ok if nothing changed)
+          # Make sure we are on the branch (not detached)
+          git checkout -B "$BRANCH_NAME"
+
+          # Stage changes (ok if none)
           git add "$OUTPUT_DIR" || true
           if git diff --cached --quiet; then
             echo "No data changes to commit."
@@ -97,17 +102,12 @@ jobs:
             git commit -m "chore(data): refresh/seed (overwrite) model data [skip ci]"
           fi
 
-          # Determine current branch (handles Main/main naming)
-          TARGET_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-          echo "Target branch: $TARGET_BRANCH"
-
-          # Always rebase onto remote tip, then push. Retry up to 3 times.
-          git fetch origin "$TARGET_BRANCH"
+          # Rebase on remote tip then push (retry)
+          git fetch origin "$BRANCH_NAME"
           for attempt in 1 2 3; do
             echo "Push attempt $attempt"
-            # Rebase local commits onto remote tip
-            git pull --rebase origin "$TARGET_BRANCH" || true
-            if git push origin "HEAD:$TARGET_BRANCH"; then
+            git pull --rebase origin "$BRANCH_NAME" || true
+            if git push origin "HEAD:$BRANCH_NAME"; then
               echo "Push succeeded."
               break
             fi
@@ -123,8 +123,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: refresh-data
     steps:
-      - name: Checkout repo
+      - name: Checkout ${{ env.BRANCH_NAME }}
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.BRANCH_NAME }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
