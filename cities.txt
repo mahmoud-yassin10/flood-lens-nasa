@@ -1,0 +1,15 @@
+alexandria
+cairo
+khartoum
+lagos
+tunis
+casablanca
+beirut
+nairobi
+mumbai
+dhaka
+jakarta
+manila
+bangkok
+karachi
+ho_chi_minh
