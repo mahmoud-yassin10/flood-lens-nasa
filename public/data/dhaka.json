@@ -1,0 +1,17 @@
+{
+  "city": "dhaka",
+  "timestamp_iso": "2025-10-16T16:52:10.474663+00:00",
+  "bucket_3h": 163021,
+  "source": "model:mock-v0",
+  "metrics": {
+    "imerg_rain_mm_last_24h": 28.5,
+    "sar_water_km2": 5.47,
+    "flood_extent_km2": 2.98,
+    "risk_score_0_1": 0.44,
+    "risk_level": "medium",
+    "confidence_0_1": 0.62,
+    "flagged": false
+  },
+  "notes": "Mock data seeded to fill gaps. Low/medium risk only; medium confidence.",
+  "disclaimer": "This is model placeholder data; do not use for safety-critical decisions."
+}

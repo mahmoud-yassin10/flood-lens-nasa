@@ -1,0 +1,17 @@
+{
+  "city": "khartoum",
+  "timestamp_iso": "2025-10-16T16:52:10.473778+00:00",
+  "bucket_3h": 163021,
+  "source": "model:mock-v0",
+  "metrics": {
+    "imerg_rain_mm_last_24h": 40.5,
+    "sar_water_km2": 7.99,
+    "flood_extent_km2": 1.54,
+    "risk_score_0_1": 0.25,
+    "risk_level": "low",
+    "confidence_0_1": 0.69,
+    "flagged": false
+  },
+  "notes": "Mock data seeded to fill gaps. Low/medium risk only; medium confidence.",
+  "disclaimer": "This is model placeholder data; do not use for safety-critical decisions."
+}
