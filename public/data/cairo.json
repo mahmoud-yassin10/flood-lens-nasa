@@ -1,0 +1,17 @@
+{
+  "city": "cairo",
+  "timestamp_iso": "2025-10-16T16:47:48.523709+00:00",
+  "bucket_3h": 163021,
+  "source": "model:mock-v0",
+  "metrics": {
+    "imerg_rain_mm_last_24h": 33.1,
+    "sar_water_km2": 1.34,
+    "flood_extent_km2": 1.3,
+    "risk_score_0_1": 0.6,
+    "risk_level": "medium",
+    "confidence_0_1": 0.62,
+    "flagged": false
+  },
+  "notes": "Mock data seeded to fill gaps. Low/medium risk only; medium confidence.",
+  "disclaimer": "This is model placeholder data; do not use for safety-critical decisions."
+}
