@@ -1,183 +1,136 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Satellite, Search } from "lucide-react";
+import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { MapPin } from "lucide-react";
 
-import { useCityStore } from "@/store/cityStore";
-import { fetchCities } from "@/lib/api";
-import { CityCard } from "@/components/CityCard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import type { City } from "@/types/city";
-import { cityBbox } from "@/lib/geo";
-import { fitToBbox } from "@/lib/mapInstance";
+import { cn } from "@/lib/utils";
+import { fetchCityLive } from "@/lib/live";
+import { Button } from "@/components/ui/button";
 
-/** Return the current 3-hour bucket index (used for cache-busting + refresh). */
-function current3hBucket(): number {
-  return Math.floor(Date.now() / (3 * 3600 * 1000));
-}
+type Props = {
+  city: City;
+  selected?: boolean;
+  onSelect?: (c: City) => void;
+};
 
-export function CityPanel() {
-  const { cities, selectedCityId, groupFilter, setCities, setSelectedCityId, setGroupFilter } =
-    useCityStore();
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+const clampPct = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function CityCard({ city, selected, onSelect }: Props) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["city-live", city.id],
+    queryFn: () => fetchCityLive(city.id),
+    // live files rotate every 3 hours; we still want quick refetches on focus
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
 
-  const queryClient = useQueryClient();
+  // ---- Normalize pieces we display ----
+  const updated = data?.updated ? new Date(data.updated) : null;
 
-  // Keep a local “bucket” so we can invalidate queries when the 3-hour window rolls.
-  const [bucket, setBucket] = useState<number>(current3hBucket());
+  const rain24 = typeof data?.rain?.h24 === "number" ? data!.rain!.h24 : null;
 
-  // Load cities list (from public/data/cities.json via fetchCities()).
-  useEffect(() => {
-    let cancelled = false;
-    const loadCities = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const list = await fetchCities(); // this should already cache-bust in api.ts
-        if (cancelled) return;
-        // Optional: keep a stable order
-        list.sort((a, b) => a.name.localeCompare(b.name));
-        setCities(list);
-        if (!useCityStore.getState().selectedCityId && list.length) {
-          setSelectedCityId(list[0].id);
-        }
-      } catch (err) {
-        if (cancelled) return;
-        console.error("Failed to load cities", err);
-        setError(err instanceof Error ? err.message : "Unable to load cities.");
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
-    loadCities();
-    return () => {
-      cancelled = true;
-    };
-  }, [setCities, setSelectedCityId]);
+  const riskScore01 =
+    typeof data?.risk?.score === "number" && isFinite(data.risk.score)
+      ? clamp01(data.risk.score)
+      : null;
 
-  // Auto-invalidate LIVE city queries when the 3-hour bucket changes
-  useEffect(() => {
-    const iv = window.setInterval(() => {
-      const b = current3hBucket();
-      if (b !== bucket) {
-        setBucket(b);
-        // Invalidate all live city queries so CityCard pulls fresh JSON for the new bucket
-        void queryClient.invalidateQueries({ queryKey: ["city-live"], exact: false });
-      }
-    }, 60 * 1000); // check once a minute
-    return () => window.clearInterval(iv);
-  }, [bucket, queryClient]);
+  // *** THIS is the fix: compute index with sane fallbacks; NEVER default to 100 ***
+  const riskIndex = React.useMemo(() => {
+    const p = data?.prediction;
+    const fromPct =
+      typeof p?.index_pct === "number" && isFinite(p.index_pct)
+        ? p.index_pct
+        : typeof p?.risk_index === "number" && isFinite(p.risk_index)
+        ? p.risk_index
+        : null;
 
-  // Apply group + search filters
-  const filteredCities = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return cities.filter((city) => {
-      const matchesGroup = groupFilter === "all" || city.group === groupFilter;
-      const matchesSearch = q === "" || city.name.toLowerCase().includes(q);
-      return matchesGroup && matchesSearch;
-    });
-  }, [cities, groupFilter, searchQuery]);
+    if (typeof fromPct === "number") return clampPct(fromPct);
+    if (riskScore01 != null) return clampPct(riskScore01 * 100);
+    return 28; // last-resort neutral number, not 100
+  }, [data?.prediction, riskScore01]);
 
-  // Select a city, update hash, move map, and refresh that city’s LIVE query.
-  const handlePick = useCallback(
-    async (target: City) => {
-      setSelectedCityId(target.id);
+  const riskLevel =
+    (data?.risk?.level as "Low" | "Medium" | "High" | undefined) ?? (riskIndex >= 66 ? "High" : riskIndex >= 33 ? "Medium" : "Low");
 
-      if (typeof window !== "undefined") {
-        window.location.hash = `/?city=${target.id}`;
-      }
+  const confidence =
+    (data?.prediction?.confidence as "medium" | "high" | undefined) ??
+    (data?.confidence as "medium" | "high" | undefined) ??
+    "medium";
 
-      const bbox = cityBbox(target);
-      fitToBbox(bbox);
-      window.requestAnimationFrame(() => fitToBbox(bbox));
-      window.setTimeout(() => fitToBbox(bbox), 250);
-
-      // Force a refresh of this city's LIVE data (cache-busted in live.ts)
-      await queryClient.invalidateQueries({ queryKey: ["city-live", target.id] });
-      // Optional: warm it immediately so the card shows filled data without waiting
-      await queryClient.refetchQueries({ queryKey: ["city-live", target.id] });
-    },
-    [queryClient, setSelectedCityId]
-  );
+  const explanation =
+    data?.prediction?.notes ??
+    data?.risk?.explanation ??
+    "Blended estimate using recent precipitation, terrain susceptibility (HAND), and SAR-indicated surface water.";
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-panel shadow-sm">
-      <div className="sticky top-0 z-10 space-y-4 border-b border-border bg-panel/95 p-4 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold">Flood Lens</h2>
-            <p className="text-xs text-muted-foreground">NASA-powered flood monitoring</p>
-          </div>
-          <Satellite className="h-8 w-8 text-primary" />
+    <div
+      className={cn(
+        "rounded-lg border border-border bg-card p-3 transition-colors",
+        selected ? "ring-2 ring-primary/50" : "hover:bg-muted/40"
+      )}
+      role="button"
+      onClick={() => onSelect?.(city)}
+    >
+      {/* Header */}
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">{city.name}</h3>
         </div>
+        <span
+          className={cn(
+            "rounded-full px-2 py-0.5 text-xs",
+            riskLevel === "High"
+              ? "bg-red-100 text-red-800"
+              : riskLevel === "Medium"
+              ? "bg-yellow-100 text-yellow-800"
+              : "bg-green-100 text-green-800"
+          )}
+        >
+          {riskLevel}
+        </span>
+      </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search cities..."
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            className="pl-9"
+      {/* Meta row */}
+      <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+        {updated && <span>Updated {updated.toLocaleString()}</span>}
+        <span>Confidence: {confidence[0].toUpperCase() + confidence.slice(1)}</span>
+        {typeof rain24 === "number" && <span>24h rain: {rain24.toFixed(1)} mm</span>}
+      </div>
+
+      {/* Predicted flood risk */}
+      <div className="mt-2 rounded-md border border-border p-2">
+        <div className="mb-1 flex items-center justify-between text-xs">
+          <span>{riskIndex}% risk index</span>
+          {data?.prediction?.valid_until && (
+            <span className="text-muted-foreground">
+              Valid until {new Date(data.prediction.valid_until).toLocaleString()}
+            </span>
+          )}
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded bg-muted">
+          <div
+            className={cn(
+              "h-2 transition-all",
+              riskLevel === "High" ? "bg-red-600" : riskLevel === "Medium" ? "bg-yellow-500" : "bg-green-600"
+            )}
+            style={{ width: `${riskIndex}%` }}
           />
         </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant={groupFilter === "all" ? "default" : "outline"}
-            onClick={() => setGroupFilter("all")}
-          >
-            All Cities
-          </Button>
-          <Button
-            size="sm"
-            variant={groupFilter === "blue_nile" ? "default" : "outline"}
-            onClick={() => setGroupFilter("blue_nile")}
-          >
-            Blue Nile
-          </Button>
-          <Button
-            size="sm"
-            variant={groupFilter === "global_hotspot" ? "default" : "outline"}
-            onClick={() => setGroupFilter("global_hotspot")}
-          >
-            Global Hotspots
-          </Button>
-          <Button
-            size="sm"
-            variant={groupFilter === "med_delta" ? "default" : "outline"}
-            onClick={() => setGroupFilter("med_delta")}
-          >
-            Mediterranean Delta
-          </Button>
-        </div>
+        <p className="mt-2 text-[11px] leading-snug text-muted-foreground">{explanation}</p>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
-        {isLoading && !cities.length ? (
-          <p className="text-sm text-muted-foreground">Loading cities…</p>
-        ) : error && !cities.length ? (
-          <p className="text-sm text-destructive">{error}</p>
-        ) : filteredCities.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No cities match your filters yet.</p>
-        ) : (
-          filteredCities.map((city) => (
-            <CityCard
-              key={city.id}
-              city={city}
-              selected={selectedCityId === city.id}
-              onSelect={handlePick}
-            />
-          ))
-        )}
+      {/* Footer */}
+      <div className="mt-3 flex items-center justify-end">
+        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); onSelect?.(city); }}>
+          View
+        </Button>
       </div>
 
-      <div className="border-t border-border p-4 text-center text-xs text-muted-foreground">
-        Data: NASA + partner feeds
-      </div>
+      {/* Loading / error small hints (non-intrusive) */}
+      {isLoading && <div className="mt-2 text-[11px] text-muted-foreground">Refreshing…</div>}
+      {isError && <div className="mt-2 text-[11px] text-destructive">Couldn’t load latest stats.</div>}
     </div>
   );
 }
