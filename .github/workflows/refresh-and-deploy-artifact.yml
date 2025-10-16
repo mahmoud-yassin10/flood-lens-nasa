@@ -17,9 +17,10 @@ concurrency:
 env:
   PYTHON_ENTRY: "python -m pipeline.run_city"
   OUTPUT_DIR: "public/data"    # Vite copies public/* into dist/
+  # Fallback city list if cities.txt isn't present
   CITIES: "alexandria cairo khartoum lagos tunis casablanca beirut nairobi mumbai dhaka jakarta manila bangkok karachi ho_chi_minh"
   ALWAYS_OVERWRITE: "1"
-  BRANCH_NAME: "Main"          # change to 'main' if your default branch is lowercase
+  BRANCH_NAME: "Main"          # <-- if your default branch is "main" lowercase, change this to main
 
 jobs:
   data:
@@ -55,14 +56,14 @@ jobs:
             echo "list=$CITIES" >> $GITHUB_OUTPUT
           fi
 
-      - name: Run pipeline (best-effort)
+      - name: Run pipeline (best-effort; OK if it fails)
         shell: bash
         env:
           PYTHON_ENTRY: ${{ env.PYTHON_ENTRY }}
         run: |
           set -euo pipefail
           for CITY in ${{ steps.cities.outputs.list }}; do
-            echo "=== $CITY ==="
+            echo "=== Pipeline for $CITY ==="
             $PYTHON_ENTRY --city "$CITY" --days 3 --write || true
           done
 
@@ -74,8 +75,11 @@ jobs:
           ALWAYS_OVERWRITE: ${{ env.ALWAYS_OVERWRITE }}
         run: |
           python scripts/seed_model_data.py
-          echo "Generated files:"
-          ls -al "$OUTPUT_DIR" || true
+          echo "---- Generated files (should be 15):"
+          ls -1 "$OUTPUT_DIR" | wc -l
+          ls -al "$OUTPUT_DIR" | sed -n '1,80p'
+          echo "---- Sample (alexandria.json head):"
+          head -n 40 "$OUTPUT_DIR/alexandria.json" || true
 
       - name: Upload city data artifact
         uses: actions/upload-artifact@v4
@@ -113,6 +117,11 @@ jobs:
         with:
           name: city-data
           path: ${{ env.OUTPUT_DIR }}
+
+      - name: List data bundled into build (debug)
+        run: |
+          echo "public/data before build:"
+          ls -al public/data || true
 
       - name: Build (Vite copies public/ → dist/)
         run: npm run build
