@@ -2,13 +2,12 @@ name: Refresh data every 3h & Deploy Pages
 
 on:
   schedule:
-    # Runs at minute 0 every 3 hours (UTC): 00:00, 03:00, 06:00, ...
     - cron: "0 */3 * * *"
   workflow_dispatch:
 
 permissions:
-  contents: write        # commit refreshed/seeded data
-  pages: write           # deploy to Pages
+  contents: write
+  pages: write
   id-token: write
 
 concurrency:
@@ -16,13 +15,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Python entry used to refresh real data (edit if your module is different)
   PYTHON_ENTRY: "python -m pipeline.run_city"
-  # Where your site reads JSON from
   OUTPUT_DIR: "public/data"
-  # Default city list (used if cities.txt not present). Space-separated.
   CITIES: "alexandria cairo khartoum lagos tunis casablanca beirut nairobi mumbai dhaka jakarta manila bangkok karachi ho_chi_minh"
-  # Force mock/model data to overwrite every run so timestamps rotate + all fields filled
   ALWAYS_OVERWRITE: "1"
 
 jobs:
@@ -75,7 +70,6 @@ jobs:
           echo "Cities: ${{ steps.cities.outputs.list }}"
           for CITY in ${{ steps.cities.outputs.list }}; do
             echo "=== Running for $CITY ==="
-            # Example:
             $PYTHON_ENTRY --city "$CITY" --days 3 --write || true
           done
 
@@ -88,18 +82,41 @@ jobs:
         run: |
           python scripts/seed_model_data.py
 
-      - name: Commit refreshed + seeded data (skip if no changes)
+      - name: Commit refreshed + seeded data (rebase & retry on conflicts)
         shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Stage changes (ok if nothing changed)
           git add "$OUTPUT_DIR" || true
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(data): refresh/seed (overwrite) model data [skip ci]"
-            git push
-          else
+          if git diff --cached --quiet; then
             echo "No data changes to commit."
+          else
+            git commit -m "chore(data): refresh/seed (overwrite) model data [skip ci]"
           fi
+
+          # Determine current branch (handles Main/main naming)
+          TARGET_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+          echo "Target branch: $TARGET_BRANCH"
+
+          # Always rebase onto remote tip, then push. Retry up to 3 times.
+          git fetch origin "$TARGET_BRANCH"
+          for attempt in 1 2 3; do
+            echo "Push attempt $attempt"
+            # Rebase local commits onto remote tip
+            git pull --rebase origin "$TARGET_BRANCH" || true
+            if git push origin "HEAD:$TARGET_BRANCH"; then
+              echo "Push succeeded."
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Push failed after 3 attempts."
+              exit 1
+            fi
+            sleep 2
+          done
 
   build:
     name: Build Vite site
