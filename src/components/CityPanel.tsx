@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Satellite, Search } from "lucide-react";
 
@@ -11,21 +11,35 @@ import type { City } from "@/types/city";
 import { cityBbox } from "@/lib/geo";
 import { fitToBbox } from "@/lib/mapInstance";
 
+/** Return the current 3-hour bucket index (used for cache-busting + refresh). */
+function current3hBucket(): number {
+  return Math.floor(Date.now() / (3 * 3600 * 1000));
+}
+
 export function CityPanel() {
-  const { cities, selectedCityId, groupFilter, setCities, setSelectedCityId, setGroupFilter } = useCityStore();
+  const { cities, selectedCityId, groupFilter, setCities, setSelectedCityId, setGroupFilter } =
+    useCityStore();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
+
+  // Keep a local “bucket” so we can invalidate queries when the 3-hour window rolls.
+  const [bucket, setBucket] = useState<number>(current3hBucket());
+
+  // Load cities list (from public/data/cities.json via fetchCities()).
   useEffect(() => {
     let cancelled = false;
     const loadCities = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const list = await fetchCities();
+        const list = await fetchCities(); // this should already cache-bust in api.ts
         if (cancelled) return;
+        // Optional: keep a stable order
+        list.sort((a, b) => a.name.localeCompare(b.name));
         setCities(list);
         if (!useCityStore.getState().selectedCityId && list.length) {
           setSelectedCityId(list[0].id);
@@ -35,32 +49,43 @@ export function CityPanel() {
         console.error("Failed to load cities", err);
         setError(err instanceof Error ? err.message : "Unable to load cities.");
       } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        if (!cancelled) setIsLoading(false);
       }
     };
-
     loadCities();
-
     return () => {
       cancelled = true;
     };
   }, [setCities, setSelectedCityId]);
 
+  // Auto-invalidate LIVE city queries when the 3-hour bucket changes
+  useEffect(() => {
+    const iv = window.setInterval(() => {
+      const b = current3hBucket();
+      if (b !== bucket) {
+        setBucket(b);
+        // Invalidate all live city queries so CityCard pulls fresh JSON for the new bucket
+        void queryClient.invalidateQueries({ queryKey: ["city-live"], exact: false });
+      }
+    }, 60 * 1000); // check once a minute
+    return () => window.clearInterval(iv);
+  }, [bucket, queryClient]);
+
+  // Apply group + search filters
   const filteredCities = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return cities.filter((city) => {
       const matchesGroup = groupFilter === "all" || city.group === groupFilter;
-      const matchesSearch = city.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = q === "" || city.name.toLowerCase().includes(q);
       return matchesGroup && matchesSearch;
     });
   }, [cities, groupFilter, searchQuery]);
 
-  const queryClient = useQueryClient();
-
+  // Select a city, update hash, move map, and refresh that city’s LIVE query.
   const handlePick = useCallback(
-    (target: City) => {
+    async (target: City) => {
       setSelectedCityId(target.id);
+
       if (typeof window !== "undefined") {
         window.location.hash = `/?city=${target.id}`;
       }
@@ -70,9 +95,12 @@ export function CityPanel() {
       window.requestAnimationFrame(() => fitToBbox(bbox));
       window.setTimeout(() => fitToBbox(bbox), 250);
 
-      void queryClient.invalidateQueries({ queryKey: ["city-live", target.id] });
+      // Force a refresh of this city's LIVE data (cache-busted in live.ts)
+      await queryClient.invalidateQueries({ queryKey: ["city-live", target.id] });
+      // Optional: warm it immediately so the card shows filled data without waiting
+      await queryClient.refetchQueries({ queryKey: ["city-live", target.id] });
     },
-    [fitToBbox, queryClient, setSelectedCityId],
+    [queryClient, setSelectedCityId]
   );
 
   return (
@@ -148,7 +176,7 @@ export function CityPanel() {
       </div>
 
       <div className="border-t border-border p-4 text-center text-xs text-muted-foreground">
-        Data: Live NASA + partner feeds
+        Data: NASA + partner feeds
       </div>
     </div>
   );
