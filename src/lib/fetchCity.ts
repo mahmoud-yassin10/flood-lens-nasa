@@ -6,6 +6,13 @@ export type CityPayload = {
   timestamp_iso: string;
   bucket_3h: number;
   source: string;
+  // legacy/flat (some components read these directly)
+  rain_0_3_mm?: number;
+  rain_0_24_mm?: number;
+  rain_24_72_mm?: number;
+  rain_api_72h_mm?: number;
+  terrain_vulnerability_text?: string;
+
   metrics: {
     rain_mm: Rain;
     terrain: Terrain;
@@ -33,8 +40,16 @@ async function fetchJson(path: string): Promise<any|null> {
   } catch { return null; }
 }
 
-function isFilled(p: any): p is CityPayload {
-  return !!p?.metrics?.rain_mm?.h0_24 && typeof p?.prediction?.index_pct === "number";
+// Backfill legacy flat keys from metrics.rain_mm (so UI tiles never show "-")
+function backfillLegacy(p: any): any {
+  const rain = p?.metrics?.rain_mm || {};
+  p.rain_0_3_mm    = p.rain_0_3_mm    ?? rain.h0_3    ?? 0;
+  p.rain_0_24_mm   = p.rain_0_24_mm   ?? rain.h0_24   ?? 0;
+  p.rain_24_72_mm  = p.rain_24_72_mm  ?? rain.h24_72  ?? 0;
+  p.rain_api_72h_mm= p.rain_api_72h_mm?? rain.api_72h ?? 0;
+  const t = p?.metrics?.terrain || {};
+  p.terrain_vulnerability_text = p.terrain_vulnerability_text ?? t.vulnerability_note ?? "—";
+  return p;
 }
 
 // If server JSON is missing/partial, synthesize a client-side mock using the same 3h seed.
@@ -65,14 +80,19 @@ function synthesize(city: string): CityPayload {
   const now = new Date();
   const valid = new Date(now.getTime() + 3*3600*1000);
 
-  return {
+  return backfillLegacy({
     city,
     timestamp_iso: now.toISOString(),
     bucket_3h: bucket,
     source: "model:mock-v2(client)",
+    rain_0_3_mm: Math.max(0,rain03),
+    rain_0_24_mm: Math.max(0,rain24),
+    rain_24_72_mm: Math.max(0,rain2472),
+    rain_api_72h_mm: api72,
+    terrain_vulnerability_text: hand < 0.35 ? "Low-lying areas near drainage" : "Moderate elevation relative to drainage",
     metrics: {
       rain_mm: { h0_3: Math.max(0,rain03), h0_24: Math.max(0,rain24), h24_72: Math.max(0,rain2472), api_72h: api72 },
-      terrain: { elevation_m_mean: elev, hand_index_0_1: hand, vulnerability_note: "HAND/elevation proxy (client mock)" },
+      terrain: { elevation_m_mean: elev, hand_index_0_1: hand, vulnerability_note: hand < 0.35 ? "Low-lying areas near drainage" : "Moderate elevation relative to drainage" },
       sar_water_km2: sarWater,
       flood_extent_km2: floodKm2,
       sar_detections: [],
@@ -87,13 +107,15 @@ function synthesize(city: string): CityPayload {
       method: "mock-blend(hand, rain, sar)",
       explanation: "Client mock to guarantee filled UI."
     }
-  };
+  });
 }
 
 export async function fetchCity(city: string): Promise<CityPayload> {
   const base = `${import.meta.env.BASE_URL || "/"}data/${city}.json`;
   const server = await fetchJson(base);
-  if (isFilled(server)) return server as CityPayload;
-  // Model-first for now (even if server responded): fill any gaps deterministically
-  return synthesize(city);
+  // Model-first: use server if present, else synthesize; always backfill legacy keys.
+  const p = server ? backfillLegacy(server) : synthesize(city);
+  return p as CityPayload;
 }
+
+
