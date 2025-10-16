@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type L from "leaflet";
 
 import type { AssetFeature, FloodEventFeature } from "@/types/geo";
@@ -43,7 +43,7 @@ async function captureMapImage(map: L.Map | null): Promise<string> {
   if (!map) return "";
   try {
     const leafletImageModule = await import("leaflet-image");
-    const leafletImage = leafletImageModule.default ?? leafletImageModule;
+    const leafletImage = (leafletImageModule as any).default ?? leafletImageModule;
     return await new Promise<string>((resolve) => {
       leafletImage(map, (err: Error | null, canvas: HTMLCanvasElement) => {
         if (err || !canvas) {
@@ -157,7 +157,9 @@ export function FloodDetailsDrawer({ open, onOpenChange, flood, impactedAssets, 
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold">Impacted asset list</p>
-              <p className="text-xs text-muted-foreground">Showing up to {Math.min(impactedAssets.length, MAX_ASSET_MARKERS).toLocaleString()} assets.</p>
+              <p className="text-xs text-muted-foreground">
+                Showing up to {Math.min(impactedAssets.length, MAX_ASSET_MARKERS).toLocaleString()} assets.
+              </p>
             </div>
             <Button onClick={handleDownload} disabled={!flood || downloading || impactedAssets.length === 0}>
               {downloading ? "Preparing PDF..." : "Download PDF"}
@@ -201,4 +203,3 @@ export function FloodDetailsDrawer({ open, onOpenChange, flood, impactedAssets, 
     </Drawer>
   );
 }
-
