@@ -1,12 +1,12 @@
-name: Refresh data every 3h & Deploy Pages
+name: Refresh data every 3h & Deploy Pages (artifact-based)
 
 on:
   schedule:
-    - cron: "0 */3 * * *"
+    - cron: "0 */3 * * *"   # every 3 hours UTC
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read           # no pushing anymore
   pages: write
   id-token: write
 
@@ -16,21 +16,22 @@ concurrency:
 
 env:
   PYTHON_ENTRY: "python -m pipeline.run_city"
+  # build will read from this exact folder; keep it stable
   OUTPUT_DIR: "public/data"
   CITIES: "alexandria cairo khartoum lagos tunis casablanca beirut nairobi mumbai dhaka jakarta manila bangkok karachi ho_chi_minh"
   ALWAYS_OVERWRITE: "1"
-  BRANCH_NAME: "Main"     # <- your default branch name (case-sensitive)
+  BRANCH_NAME: "Main"   # change to 'main' if your default branch is lowercase
 
 jobs:
-  refresh-data:
-    name: Build fresh city data
+  data:
+    name: Generate city data (real + model overwrite)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout ${{ env.BRANCH_NAME }} (not detached)
+      - name: Checkout ${{ env.BRANCH_NAME }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ env.BRANCH_NAME }}   # <- ensures we’re on the branch, not detached
+          ref: ${{ env.BRANCH_NAME }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -50,7 +51,7 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
 
-      - name: Ensure output dir exists
+      - name: Ensure output dir
         run: mkdir -p "$OUTPUT_DIR"
 
       - name: Choose city list
@@ -63,7 +64,7 @@ jobs:
             echo "list=$CITIES" >> $GITHUB_OUTPUT
           fi
 
-      - name: Run pipeline for each city (real data if available)
+      - name: Run pipeline for each city (best-effort)
         shell: bash
         env:
           PYTHON_ENTRY: ${{ env.PYTHON_ENTRY }}
@@ -84,44 +85,18 @@ jobs:
         run: |
           python scripts/seed_model_data.py
 
-      - name: Commit refreshed + seeded data (rebase & push to ${{ env.BRANCH_NAME }})
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Make sure we are on the branch (not detached)
-          git checkout -B "$BRANCH_NAME"
-
-          # Stage changes (ok if none)
-          git add "$OUTPUT_DIR" || true
-          if git diff --cached --quiet; then
-            echo "No data changes to commit."
-          else
-            git commit -m "chore(data): refresh/seed (overwrite) model data [skip ci]"
-          fi
-
-          # Rebase on remote tip then push (retry)
-          git fetch origin "$BRANCH_NAME"
-          for attempt in 1 2 3; do
-            echo "Push attempt $attempt"
-            git pull --rebase origin "$BRANCH_NAME" || true
-            if git push origin "HEAD:$BRANCH_NAME"; then
-              echo "Push succeeded."
-              break
-            fi
-            if [ "$attempt" -eq 3 ]; then
-              echo "Push failed after 3 attempts."
-              exit 1
-            fi
-            sleep 2
-          done
+      - name: Upload city data artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: city-data
+          path: ${{ env.OUTPUT_DIR }}
+          if-no-files-found: warn
+          retention-days: 3
 
   build:
-    name: Build Vite site
+    name: Build Vite site (with fresh data)
     runs-on: ubuntu-latest
-    needs: refresh-data
+    needs: data
     steps:
       - name: Checkout ${{ env.BRANCH_NAME }}
         uses: actions/checkout@v4
@@ -137,6 +112,18 @@ jobs:
 
       - name: Install deps
         run: npm ci
+
+      - name: Ensure data dir exists
+        run: mkdir -p ${{ env.OUTPUT_DIR }}
+
+      - name: Download city data artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: city-data
+          path: ${{ env.OUTPUT_DIR }}
+
+      - name: List data files (debug)
+        run: ls -al ${{ env.OUTPUT_DIR }} || true
 
       - name: Build
         run: npm run build
