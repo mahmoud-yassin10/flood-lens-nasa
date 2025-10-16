@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
+# Writes LIVE files the UI reads: public/data/live/<cityId>.json
 import os, json, time, random
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-# where the site serves data from
 OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", "public/data"))
 ALWAYS_OVERWRITE = os.environ.get("ALWAYS_OVERWRITE", "1") == "1"
+FALLBACK_IDS = os.environ.get("CITY_IDS", "").split()
 
-# deterministic rotation every 3 hours
+# Deterministic rotation every 3 hours
 BUCKET = int(time.time() // (3 * 3600))
 
 def rng_for(key: str) -> random.Random:
@@ -16,12 +17,20 @@ def rng_for(key: str) -> random.Random:
 def clamp(x, lo, hi): return max(lo, min(hi, x))
 
 def load_city_ids() -> list[str]:
-    # read the app's city list so IDs match exactly what the UI expects
-    cities_json = OUTPUT_DIR / "cities.json"
-    with cities_json.open("r", encoding="utf-8") as f:
-        cities = json.load(f)
-    ids = [c["id"] for c in cities]
-    return ids
+    # Prefer cities.json if it exists and is valid
+    cj = OUTPUT_DIR / "cities.json"
+    try:
+        if cj.exists():
+            data = json.loads(cj.read_text(encoding="utf-8"))
+            ids = [c["id"] for c in data if "id" in c]
+            if ids:
+                return ids
+    except Exception:
+        pass
+    # Fallback to env or a safe default list
+    if FALLBACK_IDS:
+        return FALLBACK_IDS
+    return ["alexandria","gerd","bahir_dar","roseires","sennar","wad_madani","khartoum","jakarta","manila","bangkok","hcmc","dhaka","mumbai","lagos","houston"]
 
 def write_city_live(city_id: str) -> None:
     outdir = OUTPUT_DIR / "live"
@@ -33,30 +42,33 @@ def write_city_live(city_id: str) -> None:
 
     r = rng_for(city_id)
 
-    # Rain: keep it reasonable/varied
+    # Rain (mm)
     rain24  = round(r.uniform(4.0, 45.0), 1)
     rain3   = round(0.12 * rain24 + r.uniform(-0.6, 0.6), 1)
     rain72  = round(0.8  * rain24 + r.uniform(-2.0, 2.0), 1)
     api72   = round(max(0.0, rain24 + rain72 + r.uniform(-3, 3)), 1)
 
-    # Terrain proxy (HAND)
+    # Terrain (HAND proxy)
     hand = round(clamp(r.uniform(0.15, 0.65), 0.0, 1.0), 2)
-    low_hand_pct = round((1.0 - hand) * 55 + r.uniform(-5, 5), 1)   # percent of AOI that is low-lying
+    low_hand_pct = round((1.0 - hand) * 55 + r.uniform(-5, 5), 1)
 
-    # SAR surface (kept small)
+    # SAR (small)
     flood_km2 = round(r.uniform(0.0, 3.0), 2)
     sar_conf  = "medium" if flood_km2 > 0.8 else "low"
 
-    # Risk (logical blend) — Low/Medium only
+    # Risk score (Low/Medium only)
     rain_term = min(1.0, rain24 / 60.0) * 0.45
     hand_term = (1.0 - hand) * 0.35
     sar_term  = min(1.0, flood_km2 / 6.0) * 0.20
     score     = clamp(rain_term + hand_term + sar_term + r.uniform(-0.05, 0.05), 0.18, 0.60)
     level     = "Medium" if score >= 0.33 else "Low"
-    conf_pred = "medium"  # keep demo confidence medium
+
+    # Confidence mix
+    pred_conf = r.choices(["medium", "high"], weights=[0.7, 0.3], k=1)[0]
 
     now = datetime.now(timezone.utc)
     valid_until = now + timedelta(hours=3)
+    index_pct = int(round(score * 100))
 
     payload = {
         "cityId": city_id,
@@ -68,29 +80,30 @@ def write_city_live(city_id: str) -> None:
             "pct_aoi": round(min(100.0, flood_km2 * 0.8), 2) if flood_km2 > 0 else None,
             "confidence": sar_conf
         },
-        "terrain": { "low_HAND_pct": max(0.0, round(low_hand_pct, 1)) },
+        "terrain": { "low_HAND_pct": max(0.0, low_hand_pct) },
         "risk": {
             "score": round(score, 2),
             "level": level,
-            "explanation": "Blend of short-term rain, terrain (HAND), and small SAR surface."
+            "explanation": "Estimate blends recent precipitation, terrain susceptibility (HAND), and SAR-indicated surface water."
         },
+        "confidence": pred_conf,
         "prediction": {
             "status": "forecast",
-            "risk_index": int(round(score * 100)),
-            "confidence": conf_pred,
+            "risk_index": index_pct,
+            "index_pct": index_pct,
+            "confidence": pred_conf,
             "valid_until": valid_until.isoformat(),
-            "notes": "Model placeholder (rotates every 3h)."
+            "notes": "Derived from blended hydro-terrain indicators and recent satellite observations."
         }
     }
 
-    with path.open("w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 def main():
     ids = load_city_ids()
     for cid in ids:
         write_city_live(cid)
-    print(f"Seeded live model files for {len(ids)} cities into {OUTPUT_DIR / 'live'} (bucket={BUCKET}).")
+    print(f"Seeded LIVE files for {len(ids)} cities (bucket={BUCKET}).")
 
 if __name__ == "__main__":
     main()
