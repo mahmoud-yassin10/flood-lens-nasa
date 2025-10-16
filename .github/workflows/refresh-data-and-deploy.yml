@@ -22,6 +22,8 @@ env:
   OUTPUT_DIR: "public/data"
   # Default city list (used if cities.txt not present). Space-separated.
   CITIES: "alexandria cairo khartoum lagos tunis casablanca beirut nairobi mumbai dhaka jakarta manila bangkok karachi ho_chi_minh"
+  # Force mock/model data to overwrite every run so timestamps rotate + all fields filled
+  ALWAYS_OVERWRITE: "1"
 
 jobs:
   refresh-data:
@@ -73,16 +75,16 @@ jobs:
           echo "Cities: ${{ steps.cities.outputs.list }}"
           for CITY in ${{ steps.cities.outputs.list }}; do
             echo "=== Running for $CITY ==="
-            # Example based on your local command:
-            # python -m pipeline.run_city --city alexandria --days 3 --write
+            # Example:
             $PYTHON_ENTRY --city "$CITY" --days 3 --write || true
           done
 
-      - name: Seed model data for empty/missing files (safe mock)
+      - name: Seed/overwrite model data so UI is always filled (safe mock)
         shell: bash
         env:
           OUTPUT_DIR: ${{ env.OUTPUT_DIR }}
           CITIES: ${{ steps.cities.outputs.list }}
+          ALWAYS_OVERWRITE: ${{ env.ALWAYS_OVERWRITE }}
         run: |
           python scripts/seed_model_data.py
 
@@ -93,7 +95,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$OUTPUT_DIR" || true
           if ! git diff --cached --quiet; then
-            git commit -m "chore(data): refresh/seed model data [skip ci]"
+            git commit -m "chore(data): refresh/seed (overwrite) model data [skip ci]"
             git push
           else
             echo "No data changes to commit."
