@@ -1,17 +1,41 @@
 {
   "city": "khartoum",
-  "timestamp_iso": "2025-10-16T16:52:10.473778+00:00",
+  "timestamp_iso": "2025-10-16T17:14:30.568290+00:00",
   "bucket_3h": 163021,
-  "source": "model:mock-v0",
+  "source": "model:mock-v2",
   "metrics": {
-    "imerg_rain_mm_last_24h": 40.5,
-    "sar_water_km2": 7.99,
-    "flood_extent_km2": 1.54,
-    "risk_score_0_1": 0.25,
-    "risk_level": "low",
-    "confidence_0_1": 0.69,
-    "flagged": false
+    "rain_mm": {
+      "h0_3": 5.4,
+      "h0_24": 40.4,
+      "h24_72": 32.4,
+      "api_72h": 71.1
+    },
+    "terrain": {
+      "elevation_m_mean": 20.6,
+      "hand_index_0_1": 0.62,
+      "vulnerability_note": "HAND/elevation proxy (mock)"
+    },
+    "sar_water_km2": 0.34,
+    "flood_extent_km2": 0.03,
+    "sar_detections": [
+      {
+        "when_iso": "2025-10-16T17:14:30.568284+00:00",
+        "area_km2": 0.06,
+        "quality": "low",
+        "note": "mock"
+      }
+    ],
+    "risk_score_0_1": 0.44,
+    "risk_level": "medium",
+    "confidence_0_1": 0.65
   },
-  "notes": "Mock data seeded to fill gaps. Low/medium risk only; medium confidence.",
-  "disclaimer": "This is model placeholder data; do not use for safety-critical decisions."
+  "prediction": {
+    "index_pct": 44,
+    "label": "medium",
+    "valid_until_iso": "2025-10-16T20:14:30.568290+00:00",
+    "method": "mock-blend(hand, rain, sar)",
+    "explanation": "Blended HAND baseline and short-term precipitation + tiny SAR surface."
+  },
+  "notes": "Mock placeholder to fill all fields; rotates every 3h; low/medium risk only.",
+  "disclaimer": "Model placeholder data; not for safety-critical use."
 }

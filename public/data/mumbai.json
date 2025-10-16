@@ -1,17 +1,47 @@
 {
   "city": "mumbai",
-  "timestamp_iso": "2025-10-16T16:52:10.474552+00:00",
+  "timestamp_iso": "2025-10-16T17:14:30.569496+00:00",
   "bucket_3h": 163021,
-  "source": "model:mock-v0",
+  "source": "model:mock-v2",
   "metrics": {
-    "imerg_rain_mm_last_24h": 16.4,
-    "sar_water_km2": 4.37,
-    "flood_extent_km2": 0.46,
-    "risk_score_0_1": 0.17,
-    "risk_level": "low",
-    "confidence_0_1": 0.66,
-    "flagged": false
+    "rain_mm": {
+      "h0_3": 1.9,
+      "h0_24": 15.7,
+      "h24_72": 11.2,
+      "api_72h": 23.9
+    },
+    "terrain": {
+      "elevation_m_mean": 10.1,
+      "hand_index_0_1": 0.53,
+      "vulnerability_note": "HAND/elevation proxy (mock)"
+    },
+    "sar_water_km2": 3.66,
+    "flood_extent_km2": 2.63,
+    "sar_detections": [
+      {
+        "when_iso": "2025-10-16T17:14:30.569489+00:00",
+        "area_km2": 0.1,
+        "quality": "low",
+        "note": "mock"
+      },
+      {
+        "when_iso": "2025-10-16T17:14:30.569494+00:00",
+        "area_km2": 0.31,
+        "quality": "low",
+        "note": "mock"
+      }
+    ],
+    "risk_score_0_1": 0.4,
+    "risk_level": "medium",
+    "confidence_0_1": 0.66
   },
-  "notes": "Mock data seeded to fill gaps. Low/medium risk only; medium confidence.",
-  "disclaimer": "This is model placeholder data; do not use for safety-critical decisions."
+  "prediction": {
+    "index_pct": 40,
+    "label": "medium",
+    "valid_until_iso": "2025-10-16T20:14:30.569496+00:00",
+    "method": "mock-blend(hand, rain, sar)",
+    "explanation": "Blended HAND baseline and short-term precipitation + tiny SAR surface."
+  },
+  "notes": "Mock placeholder to fill all fields; rotates every 3h; low/medium risk only.",
+  "disclaimer": "Model placeholder data; not for safety-critical use."
 }
