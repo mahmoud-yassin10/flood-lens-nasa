@@ -221,7 +221,7 @@ export function CityCard({ city, selected, onSelect }: CityCardProps) {
           </div>
 
           {/* Predicted flood risk card — now driven by risk.score × 100 */}
-          <PredictionCard prediction={normalizedPrediction} />
+        <PredictionCard prediction={data.prediction} riskScore={typeof data.risk?.score === "number" ? data.risk.score : null} />
 
           {data.risk ? (
             <div className="rounded-md border bg-panel/80 p-3 text-sm">
