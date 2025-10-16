@@ -1,0 +1,135 @@
+name: Refresh data every 3h & Deploy Pages (artifact)
+
+on:
+  schedule:
+    - cron: "0 */3 * * *"      # every 3 hours UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read               # we’re not pushing anymore
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  PYTHON_ENTRY: "python -m pipeline.run_city"
+  OUTPUT_DIR: "public/data"    # Vite copies public/* into dist/
+  CITIES: "alexandria cairo khartoum lagos tunis casablanca beirut nairobi mumbai dhaka jakarta manila bangkok karachi ho_chi_minh"
+  ALWAYS_OVERWRITE: "1"
+  BRANCH_NAME: "Main"          # change to 'main' if your default branch is lowercase
+
+jobs:
+  data:
+    name: Generate fresh city data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ${{ env.BRANCH_NAME }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.BRANCH_NAME }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps (if any)
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
+      - name: Ensure output dir
+        run: mkdir -p "$OUTPUT_DIR"
+
+      - name: Choose city list
+        id: cities
+        shell: bash
+        run: |
+          if [ -f cities.txt ]; then
+            echo "list=$(tr '\n' ' ' < cities.txt)" >> $GITHUB_OUTPUT
+          else
+            echo "list=$CITIES" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run pipeline (best-effort)
+        shell: bash
+        env:
+          PYTHON_ENTRY: ${{ env.PYTHON_ENTRY }}
+        run: |
+          set -euo pipefail
+          for CITY in ${{ steps.cities.outputs.list }}; do
+            echo "=== $CITY ==="
+            $PYTHON_ENTRY --city "$CITY" --days 3 --write || true
+          done
+
+      - name: Seed/overwrite model data (rotates every 3h)
+        shell: bash
+        env:
+          OUTPUT_DIR: ${{ env.OUTPUT_DIR }}
+          CITIES: ${{ steps.cities.outputs.list }}
+          ALWAYS_OVERWRITE: ${{ env.ALWAYS_OVERWRITE }}
+        run: |
+          python scripts/seed_model_data.py
+          echo "Generated files:"
+          ls -al "$OUTPUT_DIR" || true
+
+      - name: Upload city data artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: city-data
+          path: ${{ env.OUTPUT_DIR }}
+          if-no-files-found: error
+          retention-days: 3
+
+  build:
+    name: Build site with fresh data
+    runs-on: ubuntu-latest
+    needs: data
+    steps:
+      - name: Checkout ${{ env.BRANCH_NAME }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.BRANCH_NAME }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Ensure data dir
+        run: mkdir -p ${{ env.OUTPUT_DIR }}
+
+      - name: Download city data artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: city-data
+          path: ${{ env.OUTPUT_DIR }}
+
+      - name: Build (Vite copies public/ → dist/)
+        run: npm run build
+
+      - name: Upload artifact for Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
